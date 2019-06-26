@@ -14,18 +14,21 @@ dataset, infoset = DATA.process_1(raw_data, raw_info)
 X, y = DATA.shuffle_(dataset/1024, infoset[:,0])            #Tracks and targets
 print("Electron occurence: %.2f " % (sum(y)/len(y)))
 
+conv_size1 = 8
+conv_size2 = 16
+dense_size1 = 256
+dense_size2 = 64
+
 stamp = datetime.datetime.now().strftime("%d-%m-%H%M%S")
-fname = run_no + dataname + f"optm-conv-32-64-filters-dense-256-64-nodes-" + stamp
-tensorboard = TensorBoard(log_dir='logs-TB/%s'%fname, update_freq=500)
-csvlogger = CSVLogger('logs-CSV/%s'%fname)
-print(fname)
+mname = f"conv-{conv_size1}-{conv_size2}-filters-dense-{dense_size1}-{dense_size2}-nodes-"
+tensorboard, csvlogger = MODELS.logger_(run_no, 'test/', mname, stamp)
 
 net1 = MODELS.new
 net1.compile(optimizer='adam', loss='binary_crossentropy',
     metrics=['accuracy', MODELS.pion_con, MODELS.F1])
 
 for i in range(1):
-    net1.fit(x=X, y=y, batch_size = 100, epochs=10, validation_split=0.4)#, callbacks=[tensorboard, csvlogger])
+    net1.fit(x=X, y=y, batch_size = 100, epochs=10, validation_split=0.4, callbacks=[tensorboard, csvlogger])
     y_pred = net1.predict(X[:2000])
     e_pred = y_pred[y[:2000]==1]
     p_pred = y_pred[y[:2000]==0]
@@ -34,6 +37,3 @@ for i in range(1):
     plt.hist(p_pred, alpha=0.5, label = 'negative')
     plt.legend()
     plt.show()
-
-from tensorflow.keras.utils import plot_model
-plot_model(net1, to_file='model.png')

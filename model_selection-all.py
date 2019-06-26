@@ -7,7 +7,7 @@ from tensorflow.keras.callbacks import TensorBoard, CSVLogger
 from yaml import Loader, Dumper
 
 run_no = '000265378/'
-dataname = 'even/'
+dataname = 'all/'
 directory = 'data/output/' + run_no + dataname
 raw_data = np.load(directory + '0_tracks.npy')
 raw_info = np.load(directory + '0_info_set.npy')
@@ -19,10 +19,11 @@ print("Electron occurence: %.2f " % (sum(y)/len(y)))
 
 ##      MODEL       ##
 
-conv_sizes1 = [8, 16, 32]
-conv_sizes2 = [32, 64 ,128]
-dense_sizes1 = [256, 512, 1024]
-dense_sizes2 = [64, 128, 256]
+conv_sizes1 = [8, 16]
+conv_sizes2 = [32, 64]
+dense_sizes1 = [512, 1024]
+dense_sizes2 = [128, 256]
+
 
 stamp = datetime.datetime.now().strftime("%d-%m-%H%M%S")
 for i in range(1):
@@ -31,13 +32,12 @@ for i in range(1):
             for dense_size1 in dense_sizes1:
                 for dense_size2 in dense_sizes2:
                     mname = f"conv-{conv_size1}-{conv_size2}-filters-dense-{dense_size1}-{dense_size2}-nodes-"
-                    tensorboard, csvlogger = MODELS.logger_(run_no, 'test/', mname, stamp)
+                    tensorboard, csvlogger = MODELS.logger_(run_no, "test/", mname, stamp)
 
                     model = MODELS.blank_2_2_(conv_size1, conv_size2, dense_size1, dense_size2)
-
                     model.compile(optimizer='adam', loss='binary_crossentropy',
-                        metrics=['accuracy', MODELS.F1])
-                    model.fit(X, y, batch_size=100, epochs=10, validation_split=0.4)
+                        metrics=[MODELS.pion_con, MODELS.F1])
+                    model.fit(X, y, batch_size=1000, epochs=1, validation_split=0.4)
 
                     model.summary()
 
@@ -58,8 +58,8 @@ for dense_layer in dense_layers:
             model.fit(X, y, batch_size=100, epochs=10, validation_split=0.4, callbacks=[tensorboard])
             model.summary()
 
-            conv_sizes1 = [16]
-            conv_sizes2 = [64]
-            dense_sizes1 = [1024]
-            dense_sizes2 = [256]
+conv_sizes1 = [16]
+conv_sizes2 = [64]
+dense_sizes1 = [1024]
+dense_sizes2 = [256]
 """

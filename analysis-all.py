@@ -16,14 +16,16 @@ dataset, infoset = DATA.process_1(raw_data, raw_info)
 X, y = DATA.shuffle_(dataset/1024, infoset[:,0])
 print("Electron occurence: %.2f" % (100*sum(y)/len(y)))
 
-stamp = datetime.datetime.now().strftime("%d-%m-%H%M%S")
-fname = run_no + dataname + f"conv-32-64-filters-dense-256-64-nodes-" + stamp
+conv_size1 = 8
+conv_size2 = 16
+dense_size1 = 256
+dense_size2 = 64
 
-tensorboard = TensorBoard(log_dir='logs-TB/%s'%fname, update_freq=500)
-csvlogger = CSVLogger('logs-CSV/%s'%fname)
-print(fname)
+stamp = datetime.datetime.now().strftime("%d-%m-%H%M%S")
+mname = f"conv-{conv_size1}-{conv_size2}-filters-dense-{dense_size1}-{dense_size2}-nodes-"
+tensorboard, csvlogger = MODELS.logger_(run_no, 'test/', mname, stamp)
 
 net1 = MODELS.new
 net1.compile(optimizer='adam', loss='binary_crossentropy', metrics=[MODELS.pion_con, MODELS.prec, MODELS.F1])
-net1.fit(x=X, y=y, batch_size = 100, epochs=10, validation_split=0.4)#, callbacks=[tensorboard, csvlogger])
+net1.fit(x=X, y=y, batch_size = 100, epochs=10, validation_split=0.4, callbacks=[tensorboard, csvlogger])
 net1.summary()
