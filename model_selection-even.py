@@ -30,7 +30,8 @@ for i in range(1):
         for conv_size2 in conv_sizes2:
             for dense_size1 in dense_sizes1:
                 for dense_size2 in dense_sizes2:
-                    mname = f"conv-{conv_size1}-{conv_size2}-filters-dense-{dense_size1}-{dense_size2}-nodes-"
+                    mname = "conv-%d-%d-filters-dense-%d-%d-nodes-"%(conv_size1,
+                        conv_size2, dense_size1, dense_size2)
                     tensorboard, csvlogger = MODELS.logger_(run_no, 'test/', mname, stamp)
 
                     model = MODELS.blank_2_2_(conv_size1, conv_size2, dense_size1, dense_size2)

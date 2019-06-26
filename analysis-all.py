@@ -22,7 +22,8 @@ dense_size1 = 256
 dense_size2 = 64
 
 stamp = datetime.datetime.now().strftime("%d-%m-%H%M%S")
-mname = f"conv-{conv_size1}-{conv_size2}-filters-dense-{dense_size1}-{dense_size2}-nodes-"
+mname = "conv-%d-%d-filters-dense-%d-%d-nodes-"%(conv_size1,
+    conv_size2, dense_size1, dense_size2)
 tensorboard, csvlogger = MODELS.logger_(run_no, 'test/', mname, stamp)
 
 net1 = MODELS.new
