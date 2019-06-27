@@ -11,6 +11,22 @@ def subdir_(directory):
     return fileNames
 
 def process_1(raw_data, raw_info, min_tracklet=1.0, min_adcvalue=10.0, min_momentum=0.0, max_momentum=100.0):
+    """
+    raw_info[:,0] = label
+    raw_info[:,1] = nsigmae
+    raw_info[:,2] = nsigmap
+    raw_info[:,3] = PT
+    raw_info[:,4] = dEdX
+    raw_info[:,5] = P
+    raw_info[:,6] = eta
+    raw_info[:,7] = theta
+    raw_info[:,8] = phi
+    raw_info[:,9] = event
+    raw_info[:,10] = trackid
+    raw_info[:,11] = trackval
+    raw_info[:,12] = num_tracklets
+    raw_info[:,13:19] = present_map
+    """
     mask_tracklet = raw_info[:,12] > min_tracklet                          #Discriminate tracks based on no. of tracklets
     mask_adcvalue = raw_data.sum(axis=(1,2,3)) > min_adcvalue              #Sum of ADC per tracklet
     mask_momentum = (raw_info[:,5] > min_momentum) & (raw_info[:,5] < max_momentum) #Select momentum range
