@@ -1,10 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib, DATA, MODELS, time, datetime, yaml, json, yaml, random
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPool2D
-from tensorflow.keras.callbacks import TensorBoard, CSVLogger
-from yaml import Loader, Dumper
+import DATA, MODELS, LOG, METRICS
+import random, matplotlib, datetime, os
 
 run_no = '000265378/'
 dataname = 'all/'

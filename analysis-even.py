@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import DATA, MODELS, random, matplotlib, datetime, os
-from tensorflow.keras.callbacks import TensorBoard, CSVLogger
+import DATA, MODELS, LOG, METRICS
+import random, matplotlib, datetime, os
 
 run_no = '000265378/'
 dataname = 'even/'
@@ -22,14 +22,15 @@ dense_size2 = 64
 stamp = datetime.datetime.now().strftime("%d-%m-%H%M%S")
 mname = "conv-%d-%d-filters-dense-%d-%d-nodes-"%(conv_size1,
     conv_size2, dense_size1, dense_size2)
-tensorboard, csvlogger = MODELS.logger_(run_no, 'test/', mname, stamp)
+tensorboard, csvlogger = LOG.logger_(run_no, 'test/', mname, stamp)
 
 net1 = MODELS.new
 net1.compile(optimizer='adam', loss='binary_crossentropy',
-    metrics=['accuracy', MODELS.pion_con, MODELS.F1])
+    metrics=['accuracy', METRICS.pion_con, METRICS.F1])
 
 for i in range(1):
-    net1.fit(x=X, y=y, batch_size = 100, epochs=10, validation_split=0.4, callbacks=[tensorboard, csvlogger])
+    net1.fit(x=X, y=y, batch_size = 100, epochs=1, validation_split=0.4,
+        callbacks=[csvlogger])
     y_pred = net1.predict(X[:2000])
     e_pred = y_pred[y[:2000]==1]
     p_pred = y_pred[y[:2000]==0]

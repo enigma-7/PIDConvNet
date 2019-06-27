@@ -1,9 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPool2D
-from tensorflow.keras.callbacks import TensorBoard, CSVLogger
-import matplotlib, DATA, MODELS, time, datetime,random
+import DATA, MODELS, LOG, METRICS
+import random, matplotlib, datetime, os
 
 run_no = '000265378/'
 dataname = 'all/'
@@ -24,9 +22,9 @@ dense_size2 = 64
 stamp = datetime.datetime.now().strftime("%d-%m-%H%M%S")
 mname = "conv-%d-%d-filters-dense-%d-%d-nodes-"%(conv_size1,
     conv_size2, dense_size1, dense_size2)
-tensorboard, csvlogger = MODELS.logger_(run_no, 'test/', mname, stamp)
+tensorboard, csvlogger = LOG.logger_(run_no, 'test/', mname, stamp)
 
 net1 = MODELS.new
-net1.compile(optimizer='adam', loss='binary_crossentropy', metrics=[MODELS.pion_con, MODELS.prec, MODELS.F1])
+net1.compile(optimizer='adam', loss='binary_crossentropy', metrics=[METRICS.pion_con, METRICS.prec, METRICS.F1])
 net1.fit(x=X, y=y, batch_size = 100, epochs=10, validation_split=0.4, callbacks=[tensorboard, csvlogger])
 net1.summary()
