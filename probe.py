@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import DATA, MODELS, random, matplotlib, PLOT
+import random, matplotlib
+from TOOLS import DATA, PLOT
 matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['text.usetex'] = True
 
