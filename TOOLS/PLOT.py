@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-import DATA, random, matplotlib
+import random, matplotlib
 matplotlib.rcParams.update({'font.size': 18})
 matplotlib.rcParams['text.usetex'] = True
 
@@ -70,3 +70,34 @@ def iter_(data, nplots = 6):
         p = ax.pcolor(X, Y, Z)
         cb = fig.colorbar(p, ax=ax)
         plt.show()
+
+def single_(dataset, infoset):
+    num = random.randint(1,dataset.shape[0])
+    tracklet = dataset[num,:,:,0]
+    trackids = infoset[num][-3:].astype(int)
+    title = "Displaying tracklet %s:"%"/".join([str(i) for i in trackids])
+    plt.imshow(tracklet)
+
+    plt.title(title)
+    print(title, num)
+
+def tileplot_(array, title=None):
+    divlist = []
+    for x in range(1,array.shape[-1]+1):
+        if array.shape[-1] % x == 0:
+            divlist.append(x)
+
+    n = divlist[int(len(divlist)/2)]
+    m = int(array.shape[-1]/n)
+    fig, axes = plt.subplots(n,m, figsize=(16,16))
+    k = 0
+
+    for i in range(n):
+        for j in range(m):
+            axes[i,j].imshow(array[:,:,0,k])
+            axes[i,j].axis('off')
+            k +=1
+
+    #fig.colorbar(axes[0,0], ax=axes, orientation='horizontal')
+    plt.title(title)
+    plt.show()
