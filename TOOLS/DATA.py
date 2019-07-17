@@ -22,16 +22,16 @@ def process_1(raw_data, raw_info, min_tracklet=1.0, min_adcvalue=10.0, min_momen
     raw_info[:,7] = theta
     raw_info[:,8] = phi
     raw_info[:,9] = event
-    raw_info[:,10] = trackid
+    raw_info[:,10] = v0trackid
     raw_info[:,11] = trackval
     raw_info[:,12] = num_tracklets
     raw_info[:,13:19] = present_map
     """
     mask_tracklet = raw_info[:,12] > min_tracklet                          #Discriminate tracks based on no. of tracklets
-    mask_adcvalue = raw_data.sum(axis=(1,2,3)) > min_adcvalue              #Sum of ADC per tracklet
     mask_momentum = (raw_info[:,5] > min_momentum) & (raw_info[:,5] < max_momentum) #Select momentum range
-    raw_info = raw_info[mask_tracklet & mask_adcvalue & mask_momentum]
-    raw_data = raw_data[mask_tracklet & mask_adcvalue & mask_momentum]
+    mask_total = np.logical_and(mask_tracklet,mask_momentum)
+    raw_info = raw_info[mask_total]
+    raw_data = raw_data[mask_total]
     numtracks = raw_info[:,12].astype(int)                                  #Tracklets per track
 
     infoset = np.zeros((numtracks.sum(), raw_info[:,:12].shape[1]))
@@ -43,8 +43,26 @@ def process_1(raw_data, raw_info, min_tracklet=1.0, min_adcvalue=10.0, min_momen
             k += 1
 
     present = raw_info[:,-6:].flatten('C').astype('bool')
-    dataset = raw_data.reshape(raw_data.shape[0]*raw_data.shape[1],17,24,1)[present]  #NHWC array
+    dataset = raw_data.reshape(-1,17,24,1)[present]  #NHWC array
+    mask_adcvalue = dataset.sum(axis=(1,2,3)) > min_adcvalue              #Sum of ADC per tracklet
+    return dataset[mask_adcvalue], infoset[mask_adcvalue]
+
+def process_n(raw_data, raw_info, num_tracklet=6.0, min_adcvalue=10.0, min_momentum=0.0, max_momentum=100.0):
+    mask_tracklet = raw_info[:,12] == min_tracklet                          #Discriminate tracks based on no. of tracklets
+    mask_adcvalue = raw_data.sum(axis=(1,2,3)) > min_adcvalue              #Sum of ADC per tracklet
+    mask_momentum = (raw_info[:,5] > min_momentum) & (raw_info[:,5] < max_momentum) #Select momentum range
+    infoset = raw_info[mask_tracklet & mask_adcvalue & mask_momentum][:,:12]
+    dataset = raw_data[mask_tracklet & mask_adcvalue & mask_momentum]
     return dataset, infoset
+
+def bin_time_(dataset, bins = 8):
+    num = int(dataset.shape[2]/bins)
+    shapearr  = np.array(dataset.shape)
+    shapearr[2] = bins
+    datasetbinned = np.zeros(tuple(shapearr))
+    for i in range(num):
+        datasetbinned += dataset[:,:,i::num]
+    return datasetbinned
 
 def shuffle_(dataset, infoset):
     #   Apply random permutation to given dataset.  #
@@ -70,12 +88,13 @@ def batch_(dataset, targets, batch_size, pos):
     batch_targets = targets[(pos-1)*batch_size:pos*batch_size]
     return batch_dataset, batch_targets
 
-def elec_pion_split_(dataset, targets):
+def elec_pion_split_(dataset, infoset):
+    targets = infoset[:,0].astype('int')
     elec_dataset = dataset[targets.astype(bool)]
     pion_dataset = dataset[(1-targets).astype(bool)]
-    elec_targets = targets[targets==1]
-    pion_targets = targets[targets==0]
-    return [elec_dataset, elec_targets], [pion_dataset, pion_targets]
+    elec_infoset = infoset[targets==1]
+    pion_infoset = infoset[targets==0]
+    return [elec_dataset, elec_infoset], [pion_dataset, pion_infoset]
 
 def train_valid_split_(dataset, targets, split=0.2):
     #   Create training and validation sets   #
