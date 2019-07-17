@@ -24,7 +24,7 @@ class CustomLogger(Callback):
     including 1D iterables such as np.ndarray.
     # Example
     ```python
-    csv_logger = CSVLogger('training.log')
+    csv_logger = CustomLogger('training.log')
     model.fit(X_train, Y_train, callbacks=[csv_logger])
     ```
     # Arguments
@@ -62,12 +62,12 @@ class CustomLogger(Callback):
                                 **self._open_args)
 
     def on_epoch_begin(self, epoch, logs=None):
-        self.epoch_time_start = time.time()
+        self.epoch_time_start = time.time()             ##
 
     def on_epoch_end(self, epoch, logs=None):
         logs = logs or {}
-        logs['train_time'] = time.time()-self.epoch_time_start
-        print(logs.keys())
+        logs['train_time'] = time.time()-self.epoch_time_start      ##
+        
         def handle_value(k):
             is_zero_dim_ndarray = isinstance(k, np.ndarray) and k.ndim == 0
             if isinstance(k, six.string_types):
