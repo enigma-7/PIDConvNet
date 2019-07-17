@@ -14,12 +14,18 @@ dataset, infoset = DATA.process_1(raw_data, raw_info)
 X, y = DATA.shuffle_(dataset/1024, infoset[:,0])
 print("Electron occurence: %.2f " % (sum(y)/len(y)))
 
+
 ##      MODEL       ##
 
 conv_sizes1 = [8, 16, 32]
 conv_sizes2 = [32, 64 ,128]
 dense_sizes1 = [256, 512, 1024]
 dense_sizes2 = [64, 128, 256]
+
+conv_sizes1 = [8]
+conv_sizes2 = [32]
+dense_sizes1 = [256]
+dense_sizes2 = [64]
 
 stamp = datetime.datetime.now().strftime("%d-%m-%H%M%S")
 for i in range(1):
@@ -29,12 +35,12 @@ for i in range(1):
                 for dense_size2 in dense_sizes2:
                     mname = "conv-%d-%d-filters-dense-%d-%d-nodes-"%(conv_size1,
                         conv_size2, dense_size1, dense_size2)
-                    tensorboard, csvlogger = MODELS.logger_(run_no, 'test/', mname, stamp)
+                    tensorboard, csvlogger = LOG.logger_(run_no, 'test/', mname, stamp)
 
                     model = MODELS.blank_2_2_(conv_size1, conv_size2, dense_size1, dense_size2)
 
                     model.compile(optimizer='adam', loss='binary_crossentropy',
-                        metrics=['accuracy', MODELS.F1])
+                        metrics=['accuracy', METRICS.F1])
                     model.fit(X, y, batch_size=100, epochs=10, validation_split=0.4)
 
                     model.summary()
@@ -56,8 +62,4 @@ for dense_layer in dense_layers:
             model.fit(X, y, batch_size=100, epochs=10, validation_split=0.4, callbacks=[tensorboard])
             model.summary()
 
-            conv_sizes1 = [16]
-            conv_sizes2 = [64]
-            dense_sizes1 = [1024]
-            dense_sizes2 = [256]
 """
