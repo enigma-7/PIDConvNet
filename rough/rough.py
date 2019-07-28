@@ -21,6 +21,28 @@ def pion_con(y_true, y_pred, thresholds = np.arange(0,1,0.01)):
     print('P (TP,FN)\t\t: %.i (%.i,%.i)'%(tot_P, TP, FN))
     print('N (TN,FP)\t\t: %.i (%.i,%.i)'%(tot_N, TN, FP))
 
+def binary_crossentropy(target, output, from_logits=False):
+    """Binary crossentropy between an output tensor and a target tensor.
+    # Arguments
+        target: A tensor with the same shape as `output`.
+        output: A tensor.
+        from_logits: Whether `output` is expected to be a logits tensor.
+            By default, we consider that `output`
+            encodes a probability distribution.
+    # Returns
+        A tensor.
+    """
+    # Note: tf.nn.sigmoid_cross_entropy_with_logits
+    # expects logits, Keras expects probabilities.
+    if not from_logits:
+        # transform back to logits
+        _epsilon = _to_tensor(epsilon(), output.dtype.base_dtype)
+        output = tf.clip_by_value(output, _epsilon, 1 - _epsilon)
+        output = tf.log(output / (1 - output))
+
+    return tf.nn.sigmoid_cross_entropy_with_logits(labels=target,
+                                                   logits=output)
+
 #    Jeremy code    #
 def PionEfficiencyAtElectronEfficiency(e_eff, thresh = 1e-4):
     def PionEfficiencyAtElectronEfficiency(y_true, y_pred):
