@@ -16,24 +16,24 @@ print("Loaded: %s" % directory)
 
 plotdir = '/home/jibran/Desktop/neuralnet/plots/'
 dataset, infoset = DATA.process_1(raw_data, raw_info)
-columns = ["label", "nsigmae", "nsigmap", "PT", "${dE}/{dx}$", "Momenta [GeV]", "eta", "theta", "phi", "event", "V0trackID",  "track"]
-infoframe = pd.DataFrame(data=infoset, columns=columns)
-infoframe.head()
-#infoframe["ADCsum"] = dataset.sum(axis=(1,2,3))
-#infoframe["label"] = ["$\\pi$" if l == 0 else "$e^-$" for l in infoset[:,0]]
-#g = sns.pairplot(data=infoframe[["label", "dEdX", "P", "ADCsum"]], hue="label", diag_kind='hist', palette={"$\\pi$":'r',"$e^-$":'g'})
-#g.map_diag(plt.hist, log=True, edgecolor='black')
-
+columns = ["label", "nsigmae", "nsigmap", "PT", "{dE}/{dx}",
+    "Momenta [GeV]", "$\\eta$", "$\\theta$", "$\\phi$", "event", "V0trackID",  "track"]
+# infoframe = pd.DataFrame(data=infoset, columns=columns)
+# infoframe.head()
+# infoframe["ADCsum"] = dataset.sum(axis=(1,2,3))
+# infoframe["label"] = ["$\\pi$" if l == 0 else "$e$" for l in infoset[:,0]]
+# g = sns.pairplot(data=infoframe[["label", "{dE}/{dx}", "Momenta [GeV]", "ADCsum","PT"]], hue="label", diag_kind='hist', palette={"$\\pi$":'r',"$e^-$":'g'})
 
 elec_data, elec_info = DATA.elec_strip_(dataset, infoset)
 pion_data, pion_info = DATA.pion_strip_(dataset, infoset)
-
+dataset.shape
 class_data = [pion_data, elec_data]
 class_info = [pion_info, elec_info]
 cnames = ["$\\pi$","$e$"]
 colour = ['r', 'g']
+styles = ['--','-.']
 
-fig, axes = plt.subplots(1, 3, figsize=(15,5))
+fig, axes = plt.subplots(1, 2, figsize=(15,5))
 for j,n in enumerate([4,5]):
     for i in range(2):
         x = class_info[i][:,n]
@@ -43,9 +43,9 @@ for j,n in enumerate([4,5]):
             #axes[0].set_xticks([round(j,2) for j in bins[bins< np.ceil(x.max())]][::1])
         else:
             counts, bins, patches = axes[j].hist(x, edgecolor='black',
-                color = colour[i], bins=14, alpha=0.6, label=cnames[i])
+                color = colour[i], bins=15, alpha=0.6, label=cnames[i])#, cumulative=True, density=True)
         y = x[(x>bins[0]) & (x<bins[1])]
-        axes[j].set_xticks([round(j,2) for j in bins][::3])
+        #axes[j].set_xticks([round(j,2) for j in bins][::3])
         axes[j].set_xlabel(columns[n])
         axes[j].set_ylabel("Counts")
         axes[j].set_yscale('log')
@@ -119,7 +119,6 @@ plt.yscale('log')
 plt.ylabel("ADC sum")
 plt.title("")
 plt.show()
-class_data[1][(ADCsum[1]<10.0)].shape
 
 fig, axes = plt.subplots(1, 2, figsize=(12,5))
 for i,c in enumerate(class_data):
@@ -137,3 +136,21 @@ for i,c in enumerate(class_data):
     #fig.colorbar(im)#, cax=cbar_a)
 
 #fig.title('Mean tracklet per class')
+plt.figure(figsize=(8,6))
+plt.title("Bethe-Bloch")
+plt.grid()
+for i,c in enumerate(class_data):
+    nx = 5
+    ny = 4
+    x = class_info[i][:,nx]
+    y = class_info[i][:,ny]
+    binn = 10
+    bins = np.linspace(x.min(), x.max(),binn)
+    #inds = np.digitize(x, bins)
+    mean = [y[((x>=bins[i]) & (x<=bins[i+1]))].mean() for i in  range(binn-1)]
+    binx = (bins[:-1]+bins[1:])/2
+    plt.plot(binx, mean,  color = 'k', linestyle = styles[i], label=cnames[i] + "-mean")
+    plt.scatter(x, y, alpha=0.06, color = colour[i], label=cnames[i])
+    plt.xlabel(columns[nx])
+    plt.ylabel(columns[ny])
+plt.legend()

@@ -13,7 +13,7 @@ from keras.initializers import glorot_uniform
 from scipy.signal import convolve2d
 
 run_no = '000265378/'
-dataname = 'test/'
+dataname = 'even/'
 directory = 'data/output/' + run_no + dataname
 raw_data = np.load(directory + '0_tracks.npy')
 raw_info = np.load(directory + '0_info_set.npy')
@@ -40,7 +40,7 @@ for conv_size1 in conv_sizes1:
                 with CustomObjectScope({'GlorotUniform': glorot_uniform()}):
                     model = load_model(modldir + mname + ".h5", custom_objects={'F1': METRICS.F1})
 
-conv_1 = model.get_weights()[0]
+conv_1 = model.get_weights()
 num = random.randint(1,dataset.shape[0])
 tracklet = dataset[num,:,:,0]
 trackids = infoset[num][-3:].astype(int)
@@ -57,3 +57,12 @@ shapearr
 #PLOT.tileplot_(output, title="Convolved tracklets %s:"%"/".join([str(i) for i in trackids]))
 
 model
+
+input_aux = Input(shape=infoarray.shape[1:], name="kinematics")
+x = concatenate([input_aux, flattened])
+x = Dense(256)(x)
+x = Dense(64)(x)
+output_aux = Dense(1, activation='sigmoid', name="output_aux")(x)
+y = Dense(256)(flattened)
+y = Dense(64)(y)
+output_non = Dense(1, activation='sigmoid', name="output_non")(y)
