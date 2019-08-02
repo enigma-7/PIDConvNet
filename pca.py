@@ -21,8 +21,8 @@ colour = ['r', 'g']
 styles = ['--','-.']
 
 T = raw_info[:,0]
-nx = 4
-ny = 6
+nx = 3
+ny = 9
 
 columns[nx:ny+1]
 params = raw_info[:,nx:ny+1]

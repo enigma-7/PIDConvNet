@@ -5,20 +5,39 @@ import random, matplotlib, datetime, os
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense, Dropout, Flatten, Conv2D, MaxPool2D, concatenate
 import tensorflow as tf
+import pandas as pd
+from sklearn.decomposition import PCA
+from sklearn import preprocessing
 from tensorflow.keras.callbacks import TensorBoard, Callback
 
 run_no = '000265378/'
-dataname = 'even/'
+dataname = 'all/'
 directory = 'data/output/' + run_no + dataname
 raw_data = np.load(directory + '0_tracks.npy')
 raw_info = np.load(directory + '0_info_set.npy')
 print('Loaded: %s' % directory)
 
 dataset, infoset = DATA.process_1(raw_data, raw_info)
-X, y = DATA.shuffle_(dataset/1024, infoset[:,0])
+dataset, infoset = DATA.shuffle_(dataset, infoset)
+
+
 columns = ["label", "nsigmae", "nsigmap", "PT", "${dE}/{dx}$", "Momenta [GeV]", "eta", "theta", "phi", "event", "V0trackID",  "track"]
-infoarray = infoset[:,4:5]
-print(columns[4:5])
+nx = 3
+ny = 9
+params = infoset[:,nx:ny]
+print(columns[nx:ny])
+
+scaler = preprocessing.StandardScaler()
+scaled_Pdf =  scaler.fit_transform(params)
+scaled_Pdf = pd.DataFrame(scaled_Pdf, columns=columns[nx:ny])
+scaled_Pdf.head(7)
+
+pca = PCA()
+pca.fit(scaled_Pdf)
+
+X = dataset/1024
+T = infoset[:,0]
+I = pca.transform(scaled_Pdf)
 
 input_main = Input(shape=X.shape[1:], name="tracklet")
 x = Conv2D(8, [3,3], activation='relu', padding ='same')(input_main)
@@ -26,24 +45,14 @@ x = MaxPool2D([2,2], 2, padding='valid')(x)
 x = Conv2D(16, [3,3], activation='relu', padding='same')(x)
 x = MaxPool2D([2,2], 2, padding='valid')(x)
 flattened = Flatten()(x)
-input_aux = Input(shape=infoarray.shape[1:], name="info")
+input_aux = Input(shape=I.shape[1:], name="info")
 x = concatenate([input_aux, flattened])
 x = Dense(256)(x)
 x = Dense(64)(x)
 output_aux = Dense(1, activation='sigmoid')(x)
-"""
-y = Dense(256)(flattened)
-y = Dense(64)(y)
-output_non = Dense(1, activation='sigmoid', name="output_non")(y)
-
-
-input_aux = Input(shape=infoarray.shape[1:])
-x = Dense(256, activation='relu')(input_aux)
-x = Dense(64, activation='relu')(x)
-output_aux = Dense(1, activation='sigmoid')(x)
-"""
 
 model = Model(inputs=[input_main,input_aux], outputs=output_aux)
 model.summary()
-model.compile(optimizer=tf.train.AdamOptimizer(learning_rate=1e-4), loss='binary_crossentropy',metrics=['accuracy'])
-model.fit([X,infoarray], y, batch_size=100, epochs=10, validation_split=0.4, )
+model.compile(optimizer=tf.train.AdamOptimizer(learning_rate=1e-4),
+    loss='binary_crossentropy',metrics=[METRICS.pion_con])
+model.fit([X,I], T, batch_size=100, epochs=10, validation_split=0.4, )
