@@ -101,3 +101,28 @@ def tileplot_(array, title=None):
     #fig.colorbar(axes[0,0], ax=axes, orientation='horizontal')
     plt.title(title)
     plt.show()
+
+def ROC_(predict, targets, thresholds=np.arange(0,1+0.01,0.01)):
+    e_pred = predict[targets==1]
+    p_pred = predict[targets==0]
+
+    TP = np.array([e_pred[e_pred>threshold].sum() for threshold in thresholds])
+    FN = np.array([e_pred[e_pred<threshold].sum() for threshold in thresholds])
+    FP = np.array([p_pred[p_pred>threshold].sum() for threshold in thresholds])
+    TN = np.array([p_pred[p_pred<threshold].sum() for threshold in thresholds])
+
+    TPR = TP/(FN+TP)
+    FPR = FP/(TN+FP)
+    E90 = FPR[TPR>0.9][-1]
+    AUC = np.sum(np.abs(np.diff(FPR)*TPR[1:]))
+
+    plt.figure(figsize=(8,6))
+    plt.plot(FPR,TPR)
+    plt.vlines(E90, 0, 0.9, 'k', '--')
+    plt.hlines(0.9, 0, E90, 'k', '--')
+    plt.ylabel("$e$-efficiency")
+    plt.xlabel("$\\pi$-contamination")
+    plt.text(E90+0.05, 0.4, r'$\varepsilon_\pi$ = '+ str(np.round(E90, 3)), fontsize=18)
+    plt.text(E90+0.05, 0.2, 'AUC = '+ str(np.round(AUC, 2)), fontsize=18)
+    plt.grid()
+    plt.show()

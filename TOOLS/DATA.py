@@ -96,11 +96,15 @@ def elec_pion_split_(dataset, infoset):
     pion_infoset = infoset[targets==0]
     return [elec_dataset, elec_infoset], [pion_dataset, pion_infoset]
 
-def train_valid_split_(dataset, targets, split=0.2):
+def TVT_split_(dataset, infoset, test_split=0.1, valid_split=0.2):
     #   Create training and validation sets   #
-    N = int((1-split)*dataset.shape[0])
-    train_dataset = dataset[:N]
-    train_targets = targets[:N]
-    valid_dataset = dataset[N:]
-    valid_targets = targets[N:]
-    return [train_dataset, train_targets], [valid_dataset, valid_targets]
+    train_split = test_split + valid_split
+    N1 = int((1-train_split)*dataset.shape[0])
+    N2 = int((1-test_split )*dataset.shape[0])
+    train_dataset = dataset[:N1]
+    train_infoset = infoset[:N1]
+    valid_dataset = dataset[N1:N2]
+    valid_infoset = infoset[N1:N2]
+    test_dataset  = dataset[N2:]
+    test_infoset  = infoset[N2:]
+    return [train_dataset, train_infoset], [valid_dataset, valid_infoset], [test_dataset, test_infoset]
