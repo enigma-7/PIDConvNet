@@ -102,9 +102,11 @@ def tileplot_(array, title=None):
     plt.title(title)
     plt.show()
 
-def ROC_(predict, targets, thresholds=np.arange(0,1+0.01,0.01)):
+def classification_(predict, targets, thresholds=np.linspace(0,1,1000),
+    cnames = ["$\\pi$","$e$"], colour = ['r', 'g'], styles = ['--','-.'], scale='log'):
     e_pred = predict[targets==1]
     p_pred = predict[targets==0]
+    argsort = e_pred.argsort()
 
     TP = np.array([e_pred[e_pred>threshold].sum() for threshold in thresholds])
     FN = np.array([e_pred[e_pred<threshold].sum() for threshold in thresholds])
@@ -113,16 +115,24 @@ def ROC_(predict, targets, thresholds=np.arange(0,1+0.01,0.01)):
 
     TPR = TP/(FN+TP)
     FPR = FP/(TN+FP)
-    E90 = FPR[TPR>0.9][-1]
+    PiC = FPR[TPR>0.9][-1]
+    DBD = e_pred[argsort[np.multiply(argsort.shape[-1],(1-90/100)).astype(int)]]
     AUC = np.sum(np.abs(np.diff(FPR)*TPR[1:]))
 
-    plt.figure(figsize=(8,6))
-    plt.plot(FPR,TPR)
-    plt.vlines(E90, 0, 0.9, 'k', '--')
-    plt.hlines(0.9, 0, E90, 'k', '--')
-    plt.ylabel("$e$-efficiency")
-    plt.xlabel("$\\pi$-contamination")
-    plt.text(E90+0.05, 0.4, r'$\varepsilon_\pi$ = '+ str(np.round(E90, 3)), fontsize=18)
-    plt.text(E90+0.05, 0.2, 'AUC = '+ str(np.round(AUC, 2)), fontsize=18)
-    plt.grid()
+    fig, axes = plt.subplots(1, 2, figsize=(15,5))
+    axes[0].plot(FPR,TPR)
+    axes[0].vlines(PiC, 0, 0.9, 'k', '--')
+    axes[0].hlines(0.9, 0, PiC, 'k', '--')
+    axes[0].set_ylabel("$e$-efficiency")
+    axes[0].set_xlabel("$\\pi$-contamination")
+    axes[0].text(PiC+0.05, 0.4, r'$\varepsilon_\pi$ = '+ str(np.round(PiC, 3)), fontsize=18)
+    axes[0].text(PiC+0.05, 0.2, 'AUC = '+ str(np.round(AUC, 2)), fontsize=18)
+    axes[0].grid()
+
+    c, b, p = axes[1].hist(p_pred ,label=cnames[0], color=colour[0], alpha = 0.5)
+    axes[1].hist(e_pred ,label=cnames[1], color=colour[1], alpha = 0.5)
+    axes[1].set_yscale(scale)
+    axes[1].vlines(thresholds[TPR<0.9][0], 0, max(c), 'k', label="Decision Boundary")
+    axes[1].legend()
+    axes[1].grid()
     plt.show()
