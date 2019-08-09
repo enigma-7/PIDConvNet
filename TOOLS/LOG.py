@@ -67,7 +67,7 @@ class CustomLogger(Callback):
     def on_epoch_end(self, epoch, logs=None):
         logs = logs or {}
         logs['train_time'] = time.time()-self.epoch_time_start      ##
-        
+
         def handle_value(k):
             is_zero_dim_ndarray = isinstance(k, np.ndarray) and k.ndim == 0
             if isinstance(k, six.string_types):
@@ -105,8 +105,8 @@ class CustomLogger(Callback):
         self.csv_file.close()
         self.writer = None
 
-def logger_(run_no, dataname, mname, stamp):
-    fname = run_no + dataname + mname + stamp
+def logger_(run_no, dataname, stamp, mname):
+    fname = run_no + dataname + stamp + mname
     tensorboard = TensorBoard(log_dir='logs-TB/%s'%fname, update_freq=500)
     csvlogger = CustomLogger('logs-CSV/%s'%fname)
     print(fname)

@@ -102,7 +102,7 @@ def tileplot_(array, title=None):
     plt.title(title)
     plt.show()
 
-def classification_(predict, targets, thresholds=np.linspace(0,1,1000),
+def classification_(predict, targets, filename, save = True, thresholds=np.linspace(0,1,1000),
     cnames = ["$\\pi$","$e$"], colour = ['r', 'g'], styles = ['--','-.'], scale='log'):
     e_pred = predict[targets==1]
     p_pred = predict[targets==0]
@@ -125,8 +125,8 @@ def classification_(predict, targets, thresholds=np.linspace(0,1,1000),
     axes[0].hlines(0.9, 0, PiC, 'k', '--')
     axes[0].set_ylabel("$e$-efficiency")
     axes[0].set_xlabel("$\\pi$-contamination")
-    axes[0].text(PiC+0.05, 0.4, r'$\varepsilon_\pi$ = '+ str(np.round(PiC, 3)), fontsize=18)
-    axes[0].text(PiC+0.05, 0.2, 'AUC = '+ str(np.round(AUC, 2)), fontsize=18)
+    axes[0].text(PiC+0.05, 0.4, "$\\varepsilon_\\pi$ = "+ str(np.round(PiC, 3)), fontsize=18)
+    axes[0].text(PiC+0.05, 0.2, "AUC = "+ str(np.round(AUC, 2)), fontsize=18)
     axes[0].grid()
 
     c, b, p = axes[1].hist(p_pred ,label=cnames[0], color=colour[0], alpha = 0.5)
@@ -135,4 +135,6 @@ def classification_(predict, targets, thresholds=np.linspace(0,1,1000),
     axes[1].vlines(thresholds[TPR<0.9][0], 0, max(c), 'k', label="Decision Boundary")
     axes[1].legend()
     axes[1].grid()
+    if save:
+        plt.savefig(filename)
     plt.show()

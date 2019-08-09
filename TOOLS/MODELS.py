@@ -16,10 +16,11 @@ old = Sequential([
   Dense(1, activation='sigmoid')
 ])
 
+
 new = Sequential([
-  Conv2D(8, [3,3], activation='relu', padding ='same'),
+  Conv2D(8, [2,3], activation='relu', padding ='same'),
   MaxPool2D([2,2], 2, padding='valid'),
-  Conv2D(16, [3,3], activation='relu', padding='same'),
+  Conv2D(16, [2,3], activation='relu', padding='same'),
   MaxPool2D([2,2], 2, padding='valid'),
   Flatten(),
   Dense(256),
@@ -30,14 +31,26 @@ new = Sequential([
 def blank_2_2_(conv_size1, conv_size2, dense_size1, dense_size2, droprate = 0.1):
     #   Two conv layers and two dense layers    #
     model = Sequential([
-        Conv2D(conv_size1, [3,3], activation='relu', padding ='same'),
+        Conv2D(conv_size1, [2,3], activation='relu', padding ='same'),
         MaxPool2D([2,2], 2, padding='valid'),
-        Conv2D(conv_size2, [3,3], activation='relu', padding ='same'),
+        Conv2D(conv_size2, [2,3], activation='relu', padding ='same'),
         MaxPool2D([2,2], 2, padding='valid'),
         Flatten(),
         Dropout(rate=droprate),
         Dense(dense_size1),
         Dense(dense_size2),
+        Dense(1, activation='sigmoid')])
+    return model
+
+def blank_2_1_(conv_size1, conv_size2, dense_size1, droprate = 0.1):
+    model = Sequential([
+        Conv2D(conv_size1, [2,3], activation='relu', padding ='same'),
+        MaxPool2D([2,2], 2, padding='valid'),
+        Conv2D(conv_size2, [2,3], activation='relu', padding ='same'),
+        MaxPool2D([2,2], 2, padding='valid'),
+        Flatten(),
+        Dropout(rate=droprate),
+        Dense(dense_size1),
         Dense(1, activation='sigmoid')])
     return model
 
