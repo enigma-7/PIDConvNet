@@ -26,11 +26,12 @@ print(confusion_matrix)
 
 fig, axes = plt.subplots(1, 2, figsize=(8,6))
 
-axes[1].hist(positive, alpha=0.5, label = 'positive')
-axes[1].hist(negative, alpha=0.5, label = 'negative')
-axes[1].axvline(x=cutoff, label='Threshold')
+axes[1].hist(positive, alpha=0.5, label = 'positive', color='g')
+axes[1].hist(negative, alpha=0.5, label = 'negative', color='r')
+axes[1].axvline(x=cutoff, label='Threshold', color='k')
 axes[1].legend(loc=9)
 
 axes[0].axis('tight')
 axes[0].axis('off')
 axes[0].table(cellText=confusion_matrix, colLabels=columns)
+plt.show()

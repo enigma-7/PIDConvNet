@@ -46,20 +46,10 @@ x = Dense(8)(x)
 output_aux = Dense(1, activation='sigmoid')(x)
 
 model = Model(inputs=input_aux, outputs=output_aux)
-model.summary()
+#model.summary()
 model.compile(optimizer=tf.train.AdamOptimizer(learning_rate=1e-4), loss='binary_crossentropy',metrics=[METRICS.pion_con])
 model.fit(I, T, batch_size=100, epochs=10, validation_data=(Iv,Tv), )
 
-cnames = ["$\\pi$","$e$"]
-colour = ['r', 'g']
-styles = ['--','-.']
 P = model.predict(It)
 
-plt.figure(figsize=(8,6))
-for i in range(2):
-    plt.hist(P[Tt==i],label=cnames[i], alpha = 0.5, bins=100)
-plt.legend()
-plt.yscale('log')
-plt.show()
-
-PLOT.ROC_(P,Tt)
+PLOT.classification_(P,Tt, scale='linear')
