@@ -65,9 +65,9 @@ TN = np.array([p_pred[p_pred<threshold].sum() for threshold in thresholds])
 
 TPR = TP/(FN+TP)            #True Positive Rate / Recall
 FPR = FP/(TN+FP)            #False Positive Rate
-PPV = TP/(TP+FP+1e-5)            #Positive Predictive Value / Precision
+PPV = TP/(TP+FP)            #Positive Predictive Value / Precision
+plt.plot(TPR, PPV)
 PPV
-
 thresholds[TPR<0.905][0]
 
 pioncon = FPR[TPR>0.9][-1]          #estimate pion contamination
