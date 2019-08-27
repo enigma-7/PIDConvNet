@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import random, matplotlib
-from TOOLS import DATA
+from TOOLS import DATA, PLOT
 matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['text.usetex'] = True
 
@@ -18,9 +18,16 @@ plotdir = '/home/jibran/Desktop/neuralnet/plots/'
 dataset, infoset = DATA.process_1(raw_data, raw_info)
 columns = ["label", "nsigmae", "nsigmap", "PT", "{dE}/{dx}",
     "Momenta [GeV]", "$\\eta$", "$\\theta$", "$\\phi$", "event", "V0trackID",  "track"]
-# infoframe = pd.DataFrame(data=infoset, columns=columns)
-# infoframe.head()
-# infoframe["ADCsum"] = dataset.sum(axis=(1,2,3))
+
+elec_data, elec_info = DATA.elec_strip_(dataset, infoset)
+pion_data, pion_info = DATA.pion_strip_(dataset, infoset)
+PLOT.single_(elec_data, elec_info, plotdir = plotdir + "sample-e.png", save=True)
+PLOT.single_(pion_data, pion_info, plotdir = plotdir + "sample-p.png", save=True)
+infoframe = pd.DataFrame(data=infoset, columns=columns)
+infoframe.head()
+infoframe["ADCsum"] = dataset.sum(axis=(1,2,3))
+infoset = infoframe.values
+columns.append("ADC sum")
 # infoframe["label"] = ["$\\pi$" if l == 0 else "$e$" for l in infoset[:,0]]
 # g = sns.pairplot(data=infoframe[["label", "{dE}/{dx}", "Momenta [GeV]", "ADCsum","PT"]], hue="label", diag_kind='hist', palette={"$\\pi$":'r',"$e^-$":'g'})
 
@@ -33,8 +40,8 @@ cnames = ["$\\pi$","$e$"]
 colour = ['r', 'g']
 styles = ['--','-.']
 
-fig, axes = plt.subplots(1, 2, figsize=(15,5))
-for j,n in enumerate([4,5]):
+fig, axes = plt.subplots(1, 3, figsize=(15,5))
+for j,n in enumerate([4,5,12]):
     for i in range(2):
         x = class_info[i][:,n]
         if i>0:
@@ -50,7 +57,6 @@ for j,n in enumerate([4,5]):
         axes[j].set_ylabel("Counts")
         axes[j].set_yscale('log')
         axes[j].legend()
-
 
 fig, axes = plt.subplots(1, 3, figsize=(15,5))
 for i in range(2):
@@ -89,7 +95,7 @@ axes[2].set_xlabel("Momenta [GeV]")
 axes[2].grid()
 axes[2].set_xticks([round(i,1) for i in bins_e[bins_e < round(elec_momenta.max(),1)]][::5])
 
-plt.savefig(plotdir + 'momenta_hist.png')
+# plt.savefig(plotdir + 'momenta_hist.png')
 plt.show()
 
 fig, axes = plt.subplots(1, 3, figsize=(17,5))
@@ -109,6 +115,7 @@ axes[2].set_xticks(np.arange(1, 24, 2))
 axes[2].set_xlabel("Time bin no.")
 axes[2].set_ylabel("Mean ADC value per pad")
 axes[2].grid()
+# plt.savefig(plotdir + 'ave_tracklets.png')
 
 #fig, axes = plt.subplots(1, 2, figsize=(12,5))
 plt.figure(figsize=(8,6))
@@ -120,7 +127,28 @@ plt.ylabel("ADC sum")
 plt.title("")
 plt.show()
 
-fig, axes = plt.subplots(1, 2, figsize=(12,5))
+#fig.title('Mean tracklet per class')
+# plt.figure(figsize=(8,6))
+# plt.title("Bethe-Bloch")
+# plt.grid()
+# for i,c in enumerate(class_data):
+#     nx = 5
+#     ny = 4
+#     x = class_info[i][:,nx]
+#     y = class_info[i][:,ny]
+#     binn = 10
+#     bins = np.linspace(x.min(), x.max(),binn)
+#     #inds = np.digitize(x, bins)
+#     mean = [y[((x>=bins[i]) & (x<=bins[i+1]))].mean() for i in  range(binn-1)]
+#     binx = (bins[:-1]+bins[1:])/2
+#     plt.plot(binx, mean,  color = 'k', linestyle = styles[i], label=cnames[i] + "-mean")
+#     plt.scatter(x, y, alpha=0.06, color = colour[i], label=cnames[i])
+#     plt.xlabel(columns[nx])
+#     plt.ylabel(columns[ny])
+# plt.legend()
+# plt.savefig(plotdir + 'bethe_bloch.png')
+
+"""fig, axes = plt.subplots(1, 2, figsize=(12,5))
 for i,c in enumerate(class_data):
     Z = np.sum(c, axis=(0,3))/c.shape[0]
     im = axes[i].imshow(Z)
@@ -134,23 +162,4 @@ for i,c in enumerate(class_data):
     #fig.subplots_adjust(right=0.8)
     #cbar_ax = fig.add_axes([0.85, 0.15, 0.02, 0.7])
     #fig.colorbar(im)#, cax=cbar_a)
-
-#fig.title('Mean tracklet per class')
-plt.figure(figsize=(8,6))
-plt.title("Bethe-Bloch")
-plt.grid()
-for i,c in enumerate(class_data):
-    nx = 5
-    ny = 4
-    x = class_info[i][:,nx]
-    y = class_info[i][:,ny]
-    binn = 10
-    bins = np.linspace(x.min(), x.max(),binn)
-    #inds = np.digitize(x, bins)
-    mean = [y[((x>=bins[i]) & (x<=bins[i+1]))].mean() for i in  range(binn-1)]
-    binx = (bins[:-1]+bins[1:])/2
-    plt.plot(binx, mean,  color = 'k', linestyle = styles[i], label=cnames[i] + "-mean")
-    plt.scatter(x, y, alpha=0.06, color = colour[i], label=cnames[i])
-    plt.xlabel(columns[nx])
-    plt.ylabel(columns[ny])
-plt.legend()
+    """

@@ -71,14 +71,22 @@ def iter_(data, nplots = 6):
         cb = fig.colorbar(p, ax=ax)
         plt.show()
 
-def single_(dataset, infoset):
-    num = random.randint(1,dataset.shape[0])
-    tracklet = dataset[num,:,:,0]
+def single_(dataset, infoset, save=False, plotdir = '/home/jibran/Desktop/neuralnet/plots/'):
+    num = random.randint(0,dataset.shape[0]-1)
+    j = random.randint(0,dataset.shape[-1]-1)
+    tracklet = dataset[num,:,:,j]
     trackids = infoset[num][-3:].astype(int)
     title = "Displaying tracklet %s:"%"/".join([str(i) for i in trackids])
     plt.imshow(tracklet)
-
+    if infoset[num,0] == 1:
+        title = "$e$ -- " + title
+    else:
+        title = "$\\pi$ -- " + title
     plt.title(title)
+    plt.xticks(np.arange(0, 24, 4))
+    plt.yticks(np.arange(0, 18, 2))
+    if save:
+        plt.savefig(plotdir)
     print(title, num)
 
 def tileplot_(array, title=None):
@@ -102,7 +110,7 @@ def tileplot_(array, title=None):
     plt.title(title)
     plt.show()
 
-def classification_(predict, targets, filename, save = True, thresholds=np.linspace(0,1,1000),
+def classification_(predict, targets, filename='str', save = False, thresholds=np.linspace(0,1,1000),
     cnames = ["$\\pi$","$e$"], colour = ['r', 'g'], styles = ['--','-.'], scale='log'):
     e_pred = predict[targets==1]
     p_pred = predict[targets==0]
@@ -113,28 +121,34 @@ def classification_(predict, targets, filename, save = True, thresholds=np.linsp
     FP = np.array([p_pred[p_pred>threshold].sum() for threshold in thresholds])
     TN = np.array([p_pred[p_pred<threshold].sum() for threshold in thresholds])
 
-    TPR = TP/(FN+TP)
-    FPR = FP/(TN+FP)
-    PiC = FPR[TPR>0.9][-1]
-    DBD = e_pred[argsort[np.multiply(argsort.shape[-1],(1-90/100)).astype(int)]]
-    AUC = np.sum(np.abs(np.diff(FPR)*TPR[1:]))
+    TPR = TP/(FN+TP)            #True Positive Rate / Recall
+    FPR = FP/(TN+FP)            #False Positive Rate
+    PPV = TP/(TP+FP)            #Positive Predictive Value / Precision
+    pioncon = FPR[TPR>0.9][-1]          #estimate pion contamination
+    decbound = thresholds[TPR<0.905][0]
+    AUC = np.sum(np.abs(np.diff(FPR)*TPR[1:]))          #estimate area under curve
 
-    fig, axes = plt.subplots(1, 2, figsize=(15,5))
+    fig, axes = plt.subplots(1, 3, figsize=(15,5))
     axes[0].plot(FPR,TPR)
-    axes[0].vlines(PiC, 0, 0.9, 'k', '--')
-    axes[0].hlines(0.9, 0, PiC, 'k', '--')
+    axes[0].vlines(pioncon, 0, 0.9, 'k', '--')
+    axes[0].hlines(0.9, 0, pioncon, 'k', '--')
     axes[0].set_ylabel("$e$-efficiency")
     axes[0].set_xlabel("$\\pi$-contamination")
-    axes[0].text(PiC+0.05, 0.4, "$\\varepsilon_\\pi$ = "+ str(np.round(PiC, 3)), fontsize=18)
-    axes[0].text(PiC+0.05, 0.2, "AUC = "+ str(np.round(AUC, 2)), fontsize=18)
+    axes[0].text(pioncon+0.05, 0.4, "$\\varepsilon_\\pi$ = "+ str(np.round(pioncon, 3)), fontsize=18)
+    axes[0].text(pioncon+0.05, 0.2, "AUC = "+ str(np.round(AUC, 2)), fontsize=18)
     axes[0].grid()
 
-    c, b, p = axes[1].hist(p_pred ,label=cnames[0], color=colour[0], alpha = 0.5)
-    axes[1].hist(e_pred ,label=cnames[1], color=colour[1], alpha = 0.5)
-    axes[1].set_yscale(scale)
-    axes[1].vlines(thresholds[TPR<0.9][0], 0, max(c), 'k', label="Decision Boundary")
-    axes[1].legend()
+    axes[1].plot(TPR,PPV)
+    axes[1].set_xlabel("$e$-efficiency")
+    axes[1].set_ylabel("Precision")
     axes[1].grid()
+
+    c, b, p = axes[2].hist(p_pred ,label=cnames[0], color=colour[0], alpha = 0.5)
+    axes[2].hist(e_pred ,label=cnames[1], color=colour[1], alpha = 0.5)
+    axes[2].set_yscale(scale)
+    axes[2].vlines(decbound, 0, max(c), 'k', label="Decision Boundary")
+    axes[2].legend()
+    axes[2].grid()
     if save:
         plt.savefig(filename)
     plt.show()

@@ -10,7 +10,7 @@ def subdir_(directory):
     fileNames.sort()
     return fileNames
 
-def process_1(raw_data, raw_info, min_tracklet=1.0, min_adcvalue=10.0, min_momentum=0.0, max_momentum=100.0):
+def process_tracklet_(raw_data, raw_info, min_tracklet=1.0, min_adcvalue=10.0, min_momentum=0.0, max_momentum=100.0):
     """
     raw_info[:,0] = label
     raw_info[:,1] = nsigmae
@@ -47,12 +47,12 @@ def process_1(raw_data, raw_info, min_tracklet=1.0, min_adcvalue=10.0, min_momen
     mask_adcvalue = dataset.sum(axis=(1,2,3)) > min_adcvalue              #Sum of ADC per tracklet
     return dataset[mask_adcvalue], infoset[mask_adcvalue]
 
-def process_n(raw_data, raw_info, num_tracklet=6.0, min_adcvalue=10.0, min_momentum=0.0, max_momentum=100.0):
-    mask_tracklet = raw_info[:,12] == min_tracklet                          #Discriminate tracks based on no. of tracklets
+def process_track_(raw_data, raw_info, num_tracklet=6.0, min_adcvalue=10.0, min_momentum=0.0, max_momentum=100.0):
+    mask_tracklet = raw_info[:,12] == num_tracklet                          #Discriminate tracks based on no. of tracklets
     mask_adcvalue = raw_data.sum(axis=(1,2,3)) > min_adcvalue              #Sum of ADC per tracklet
     mask_momentum = (raw_info[:,5] > min_momentum) & (raw_info[:,5] < max_momentum) #Select momentum range
     infoset = raw_info[mask_tracklet & mask_adcvalue & mask_momentum][:,:12]
-    dataset = raw_data[mask_tracklet & mask_adcvalue & mask_momentum]
+    dataset = raw_data[mask_tracklet & mask_adcvalue & mask_momentum].swapaxes(1,2).swapaxes(2,3)
     return dataset, infoset
 
 def bin_time_(dataset, bins = 8):

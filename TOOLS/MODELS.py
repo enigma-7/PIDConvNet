@@ -23,7 +23,7 @@ new = Sequential([
   Conv2D(16, [2,3], activation='relu', padding='same'),
   MaxPool2D([2,2], 2, padding='valid'),
   Flatten(),
-  Dense(256),
+  Dense(128),
   Dense(64),
   Dense(1, activation='sigmoid')
 ])
