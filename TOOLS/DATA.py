@@ -11,7 +11,6 @@ def subdir_(directory):
     fileNames.sort()
     return fileNames
 
-
 def process_tracklet_(raw_data, raw_info, min_tracklet=1.0, min_adcvalue=10.0, min_momentum=0.0, max_momentum=100.0):
     """
     raw_info[0] = label
@@ -67,29 +66,6 @@ def process_track_(raw_data, raw_info, num_tracklet=6.0, min_adcvalue=10.0, min_
         int(num_tracklet)).swapaxes(1,2).astype('int')
     return dataset, infoset, coordinates
 
-def calib_track_(dataset, infoset, coordinates, ocdbdir):
-    R = infoset[:,9].astype('int')
-    runs = set(R)
-
-    for run in runs:
-        print(run)
-        gainglob = pd.read_csv(ocdbdir + 'chamber_info_2016_%d.txt'%run, header = None).values[:,3]
-        gainlocl = pd.read_csv(ocdbdir + 'local_gains_2016_%d.txt'%run,
-            header = None).values.reshape((540, 16,-1))[:,:,2:]           #(detector, row, column)
-
-        gainG = np.ones(dataset.shape)                   #gain for chambers
-        gainP = np.ones(dataset.shape)
-        mask = np.where(R==run, range(dataset.shape[0]), -1)
-
-        for i in range(coordinates.shape[0]):
-            if i == mask[i]:
-                for j, [d, r, c] in enumerate(coordinates[i]):
-                    gainP[i,:,:,j] = np.tile(gainlocl[d, r, c-8:c+9],(24,1)).T
-                    gainG[i,:,:,j] = np.tile(gainglob[d],(17,24))
-
-        dataset = np.multiply(np.multiply(dataset, gainP),gainG)
-    return dataset
-
 def calib_tracklet_(dataset, infoset, coordinates, ocdbdir):
     R = infoset[:,9].astype('int')
     runs = set(R)
@@ -112,6 +88,29 @@ def calib_tracklet_(dataset, infoset, coordinates, ocdbdir):
         dataset = np.multiply(np.multiply(dataset, gainP),gainG)
     return dataset
 
+def calib_track_(dataset, infoset, coordinates, ocdbdir):
+    R = infoset[:,9].astype('int')
+    runs = set(R)
+
+    for run in runs:
+        print(run)
+        gainglob = pd.read_csv(ocdbdir + 'chamber_info_2016_%d.txt'%run, header = None).values[:,3]
+        gainlocl = pd.read_csv(ocdbdir + 'local_gains_2016_%d.txt'%run,
+            header = None).values.reshape((540, 16,-1))[:,:,2:]           #(detector, row, column)
+
+        gainG = np.ones(dataset.shape)                   #gain for chambers
+        gainP = np.ones(dataset.shape)
+        mask = np.where(R==run, range(dataset.shape[0]), -1)
+
+        for i in range(coordinates.shape[0]):
+            if i == mask[i]:
+                for j, [d, r, c] in enumerate(coordinates[i]):
+                    gainP[i,:,:,j] = np.tile(gainlocl[d, r, c-8:c+9],(24,1)).T
+                    gainG[i,:,:,j] = np.tile(gainglob[d],(17,24))
+
+        dataset = np.multiply(np.multiply(dataset, gainP),gainG)
+    return dataset
+    
 def bin_time_(dataset, bins = 8):
     num = int(dataset.shape[2]/bins)
     shapearr  = np.array(dataset.shape)

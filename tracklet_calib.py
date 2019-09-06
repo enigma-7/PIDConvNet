@@ -15,34 +15,6 @@ raw_info = np.load(datadir + '0_info_set.npy') # det ()14:20) row (20:26) col (2
 dataset, infoset, coordinates = DATA.process_tracklet_(raw_data, raw_info)
 calib = DATA.calib_track_(dataset, infoset, coordinates, DEFAULTS.ocdbdir)
 
-def calib_tracklet_(dataset, infoset, coordinates, ocdbdir):
-    R = infoset[:,9].astype('int')
-    runs = set(R)
-
-    for run in runs:
-        print(run)
-        gainglob = pd.read_csv(ocdbdir + 'chamber_info_2016_%d.txt'%run, header = None).values[:,3]
-        gainlocl = pd.read_csv(ocdbdir + 'local_gains_2016_%d.txt'%run,
-            header = None).values.reshape((540, 16,-1))[:,:,2:]           #(detector, row, column)
-
-        gainG = np.ones(dataset.shape)                   #gain for chambers
-        gainP = np.ones(dataset.shape)
-        mask = np.where(R==run, range(dataset.shape[0]), -1)
-
-        for i, [d, r, c] in enumerate(coordinates):
-            if i == mask[i]:
-                gainP[i,:,:,0] = np.tile(gainlocl[d, r, c-8:c+9],(24,1)).T
-                gainG[i,:,:,0] = np.tile(gainglob[d],(17,24))
-
-        dataset = np.multiply(np.multiply(dataset, gainP),gainG)
-    return dataset
-
-gainG = np.ones(dataset.shape)                   #gain for chambers
-gainP = np.ones(dataset.shape)
-for i, [d, r, c] in enumerate(coordinates[i]):
-    gainP[i,:,:,0] = np.tile(gainlocl[d, r, c-8:c+9],(24,1)).T
-    gainG[i,:,:,0] = np.tile(gainglob[d],(17,24))
-calib = calib_tracklet_(dataset, infoset, coordinates, ocdbdir)
 
 calib_cols = ["Detector", "Anode Voltage", "Drift Voltage", "Gain", "Drift Velocity", "ExB"]
 info_cols = ["label", "nsigmae", "nsigmap", "PT", "{dE}/{dx}", "Momenta [GeV]", "$\\eta$", "$\\theta$", "$\\phi$",
@@ -67,10 +39,8 @@ for i, [d, r, c] in enumerate(coordinates):
     gainpads[i] = np.tile(localgains[d, r, c-8:c+9],(24,1)).T
     ocdbinfo[i] = chamber.values[d]
 
-gainglob = gainglob.reshape(-1,17,24,1)
-gainpads = gainpads.reshape(-1,17,24,1)
 
-Xcalib = np.multiply(np.multiply(dataset, gainpads),gainglob)
+
 #
 # info_cols.extend(chamber.columns.values)
 # infoset = np.append(infoset, ocdbinfo, axis=1)
