@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import os
 
 def subdir_(directory):
@@ -10,50 +11,106 @@ def subdir_(directory):
     fileNames.sort()
     return fileNames
 
+
 def process_tracklet_(raw_data, raw_info, min_tracklet=1.0, min_adcvalue=10.0, min_momentum=0.0, max_momentum=100.0):
     """
-    raw_info[:,0] = label
-    raw_info[:,1] = nsigmae
-    raw_info[:,2] = nsigmap
-    raw_info[:,3] = PT
-    raw_info[:,4] = dEdX
-    raw_info[:,5] = P
-    raw_info[:,6] = eta
-    raw_info[:,7] = theta
-    raw_info[:,8] = phi
-    raw_info[:,9] = event
-    raw_info[:,10] = v0trackid
-    raw_info[:,11] = trackval
-    raw_info[:,12] = num_tracklets
-    raw_info[:,13:19] = present_map
+    raw_info[0] = label
+    raw_info[1] = nsigmae
+    raw_info[2] = nsigmap
+    raw_info[3] = PT
+    raw_info[4] = dEdX
+    raw_info[5] = P
+    raw_info[6] = eta
+    raw_info[7] = theta
+    raw_info[8] = phi
+    raw_info[9] = run_number
+    raw_info[10] = event
+    raw_info[11] = trackid
+    raw_info[12] = trackval
+    raw_info[13] = num_tracklets
+    raw_info[14:20] = dets
+    raw_info[20:26] = rows
+    raw_info[26:32] = cols
+    raw_info[32:38] = present_map
     """
-    mask_tracklet = raw_info[:,12] > min_tracklet                          #Discriminate tracks based on no. of tracklets
+    mask_tracklet = raw_info[:,13] > min_tracklet                          #Discriminate tracks based on no. of tracklets
     mask_momentum = (raw_info[:,5] > min_momentum) & (raw_info[:,5] < max_momentum) #Select momentum range
     mask_total = np.logical_and(mask_tracklet,mask_momentum)
+
     raw_info = raw_info[mask_total]
     raw_data = raw_data[mask_total]
-    numtracks = raw_info[:,12].astype(int)                                  #Tracklets per track
 
-    infoset = np.zeros((numtracks.sum(), raw_info[:,:12].shape[1]))
+    numtracklets = raw_info[:,13].astype(int)                                  #Tracklets per track
+    infoset = np.zeros((numtracklets.sum(), raw_info[:,:13].shape[1]))
     k = 0
-    for i in range(len(numtracks)):
+    for i in range(len(numtracklets)):
         t = i
-        for j in range(numtracks[i]):
-            infoset[k] = raw_info[i,:12]
+        for j in range(numtracklets[i]):
+            infoset[k] = raw_info[i,:13]
             k += 1
 
     present = raw_info[:,-6:].flatten('C').astype('bool')
     dataset = raw_data.reshape(-1,17,24,1)[present]  #NHWC array
+    coordinates = raw_info[:,14:32].reshape(-1,3,6).swapaxes(1,2).reshape(-1,3)[present].astype('int') #[tracklet, [det, row, col]]
     mask_adcvalue = dataset.sum(axis=(1,2,3)) > min_adcvalue              #Sum of ADC per tracklet
-    return dataset[mask_adcvalue], infoset[mask_adcvalue]
+
+    return dataset[mask_adcvalue], infoset[mask_adcvalue], coordinates[mask_adcvalue]
 
 def process_track_(raw_data, raw_info, num_tracklet=6.0, min_adcvalue=10.0, min_momentum=0.0, max_momentum=100.0):
-    mask_tracklet = raw_info[:,12] == num_tracklet                          #Discriminate tracks based on no. of tracklets
+    mask_tracklet = raw_info[:,13] == num_tracklet                         #Discriminate tracks based on no. of tracklets
     mask_adcvalue = raw_data.sum(axis=(1,2,3)) > min_adcvalue              #Sum of ADC per tracklet
     mask_momentum = (raw_info[:,5] > min_momentum) & (raw_info[:,5] < max_momentum) #Select momentum range
-    infoset = raw_info[mask_tracklet & mask_adcvalue & mask_momentum][:,:12]
+
+    infoset = raw_info[mask_tracklet & mask_adcvalue & mask_momentum][:,:13]
     dataset = raw_data[mask_tracklet & mask_adcvalue & mask_momentum].swapaxes(1,2).swapaxes(2,3)
-    return dataset, infoset
+    coordinates = raw_info[mask_tracklet & mask_adcvalue & mask_momentum][:,14:32].reshape(-1,3,
+        int(num_tracklet)).swapaxes(1,2).astype('int')
+    return dataset, infoset, coordinates
+
+def calib_track_(dataset, infoset, coordinates, ocdbdir):
+    R = infoset[:,9].astype('int')
+    runs = set(R)
+
+    for run in runs:
+        print(run)
+        gainglob = pd.read_csv(ocdbdir + 'chamber_info_2016_%d.txt'%run, header = None).values[:,3]
+        gainlocl = pd.read_csv(ocdbdir + 'local_gains_2016_%d.txt'%run,
+            header = None).values.reshape((540, 16,-1))[:,:,2:]           #(detector, row, column)
+
+        gainG = np.ones(dataset.shape)                   #gain for chambers
+        gainP = np.ones(dataset.shape)
+        mask = np.where(R==run, range(dataset.shape[0]), -1)
+
+        for i in range(coordinates.shape[0]):
+            if i == mask[i]:
+                for j, [d, r, c] in enumerate(coordinates[i]):
+                    gainP[i,:,:,j] = np.tile(gainlocl[d, r, c-8:c+9],(24,1)).T
+                    gainG[i,:,:,j] = np.tile(gainglob[d],(17,24))
+
+        dataset = np.multiply(np.multiply(dataset, gainP),gainG)
+    return dataset
+
+def calib_tracklet_(dataset, infoset, coordinates, ocdbdir):
+    R = infoset[:,9].astype('int')
+    runs = set(R)
+
+    for run in runs:
+        print(run)
+        gainglob = pd.read_csv(ocdbdir + 'chamber_info_2016_%d.txt'%run, header = None).values[:,3]
+        gainlocl = pd.read_csv(ocdbdir + 'local_gains_2016_%d.txt'%run,
+            header = None).values.reshape((540, 16,-1))[:,:,2:]           #(detector, row, column)
+
+        gainG = np.ones(dataset.shape)                   #gain for chambers
+        gainP = np.ones(dataset.shape)
+        mask = np.where(R==run, range(dataset.shape[0]), -1)
+
+        for i, [d, r, c] in enumerate(coordinates):
+            if i == mask[i]:
+                gainP[i,:,:,0] = np.tile(gainlocl[d, r, c-8:c+9],(24,1)).T
+                gainG[i,:,:,0] = np.tile(gainglob[d],(17,24))
+
+        dataset = np.multiply(np.multiply(dataset, gainP),gainG)
+    return dataset
 
 def bin_time_(dataset, bins = 8):
     num = int(dataset.shape[2]/bins)
