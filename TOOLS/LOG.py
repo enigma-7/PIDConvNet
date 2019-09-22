@@ -3,7 +3,6 @@ import os, csv, six, time, json, warnings, io
 import tensorflow.keras.backend as K
 #from .engine.training_utils import standardize_input_data
 from collections import deque, OrderedDict, Iterable, defaultdict
-
 try:
     import requests
 except ImportError:
@@ -16,6 +15,7 @@ _PREDICT = 'predict'
 
 
 from tensorflow.keras.callbacks import TensorBoard, Callback
+import pandas as pd
 import numpy as np
 
 class CustomLogger(Callback):
@@ -105,9 +105,25 @@ class CustomLogger(Callback):
         self.csv_file.close()
         self.writer = None
 
-def logger_(run_no, dataname, stamp, mname):
-    fname = run_no + dataname + stamp + mname
+def logger_(dataname, stamp, mname):
+    fname = dataname + stamp + mname
     tensorboard = TensorBoard(log_dir='logs-TB/%s'%fname, update_freq=500)
     csvlogger = CustomLogger('logs-CSV/%s'%fname)
-    print(fname)
+    print("\n" + fname + "\n")
     return tensorboard, csvlogger
+
+def import_(filenames, position = 1):
+    li = []
+    nm = []
+
+    for i, filename in enumerate(filenames):
+        nm.append(filename.split('_')[-position])
+        df = pd.read_csv(filename, index_col=None, header=0)
+        df['model_name'] = ["%s"%filename.split('_')[-position]]*df.values.shape[0]
+        li.append(df)
+
+    frame = pd.concat(li, axis=0, names=nm)
+    frame = frame.set_index(['model_name', 'epoch'])
+    frame.head()
+    frame.sum(level='model_name').sort_values(by='train_time', inplace=True)
+    return frame, nm
