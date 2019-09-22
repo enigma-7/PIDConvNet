@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import random, matplotlib
-from TOOLS import PLOT, METRICS, DATA
+from TOOLS import PLOT, METRICS, DATA, DEFAULTS
 matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['text.usetex'] = True
 
@@ -12,15 +12,13 @@ from keras.utils import CustomObjectScope
 from keras.initializers import glorot_uniform
 from scipy.signal import convolve2d
 
-run_no = '000265378/'
-dataname = 'even/'
-directory = 'data/output/' + run_no + dataname
+directory = DEFAULTS.datadir + 'DS2/'
 raw_data = np.load(directory + '0_tracks.npy')
 raw_info = np.load(directory + '0_info_set.npy')
 print("Loaded: %s" % directory)
 
 sumtracks = [np.sum(raw_info[:,6] == i) for i in range(7)]               #Sanity check
-dataset, infoset = DATA.process_1(raw_data, raw_info)
+dataset, infoset, coord = DATA.process_tracklet_(raw_data, raw_info)
 
 X, y = DATA.shuffle_(dataset/1024, infoset[:,0])
 plt.imshow(X[0][:,:,0])
