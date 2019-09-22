@@ -143,8 +143,11 @@ def classification_(predict, targets, filename='str', save = False, thresholds=n
     axes[1].set_ylabel("Precision")
     axes[1].grid()
 
-    c, b, p = axes[2].hist(p_pred ,label=cnames[0], color=colour[0], alpha = 0.5)
-    axes[2].hist(e_pred ,label=cnames[1], color=colour[1], alpha = 0.5)
+    c1, b1 = np.histogram(p_pred, bins=40)
+    c2, b2 = np.histogram(e_pred, bins=b1)
+
+    axes[2].step(b1[:-1], c1, label=cnames[0], color=colour[0])
+    axes[2].step(b2[:-1], c2, label=cnames[1], color=colour[1])
     axes[2].set_yscale(scale)
     axes[2].vlines(decbound, 0, max(c), 'k', label="Decision Boundary")
     axes[2].legend()
