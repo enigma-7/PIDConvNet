@@ -2,50 +2,27 @@ import numpy as np
 import pandas as pd
 from TOOLS import DEFAULTS, DATA
 
-
-runs = [265378, 265381, 265383, 265385, 265420]
 run_no = 265378
 
 ocdbdir = DEFAULTS.ocdbdir
-datadir = DEFAULTS.datadir + 'DS1/'#'000%d/all/'%run_no
+datadir = DEFAULTS.datadir + 'DS2/'#'000%d/all/'%run_no
 
 raw_data = np.load(datadir + '0_tracks.npy')
 raw_info = np.load(datadir + '0_info_set.npy') # det ()14:20) row (20:26) col (26:32) presence (32:38)
 
 dataset, infoset, coordinates = DATA.process_tracklet_(raw_data, raw_info)
-calib = DATA.calib_track_(dataset, infoset, coordinates, DEFAULTS.ocdbdir)
+dataset, infoset = DATA.ocdb_tracklet_(dataset, infoset, coordinates, DEFAULTS.ocdbdir)
 
-
-calib_cols = ["Detector", "Anode Voltage", "Drift Voltage", "Gain", "Drift Velocity", "ExB"]
+ocdb_cols = ["Anode Voltage", "Drift Voltage", "Drift Velocity", "ExB"]
 info_cols = ["label", "nsigmae", "nsigmap", "PT", "{dE}/{dx}", "Momenta [GeV]", "$\\eta$", "$\\theta$", "$\\phi$",
     "run_no", "event", "V0trackID",  "track"]
 
-chamber = pd.read_csv(ocdbdir + 'chamber_info_2016_%d.txt'%run_no, header = None)
-chamber.columns = calib_cols
+info_cols.extend(ocdb_cols)
+infoframe = pd.DataFrame(data=extend, columns= info_cols)
+infoframe.head(20)
 
-globalgains = chamber["Gain"].values
-localgains = pd.read_csv(ocdbdir + 'local_gains_2016_%d.txt'%run_no, header = None)
-localgains = localgains.values.reshape((540, 16,-1))[:,:,2:]            #(detector, row, pads)
+infoframe[ocdb_cols].describe()
 
-chamber.drop(columns=["Detector","Gain"], inplace=True)
-chamber.describe()
-
-gainglob = np.zeros((dataset.shape[0],17,24))                   #gain for chambers
-gainpads = np.zeros((dataset.shape[0],17,24))           #gain for individual pads
-ocdbinfo = np.zeros((dataset.shape[0], chamber.values.shape[1]))
-
-for i, [d, r, c] in enumerate(coordinates):
-    gainglob[i] = np.tile(globalgains[d],(17,24))
-    gainpads[i] = np.tile(localgains[d, r, c-8:c+9],(24,1)).T
-    ocdbinfo[i] = chamber.values[d]
-
-
-
-#
-# info_cols.extend(chamber.columns.values)
-# infoset = np.append(infoset, ocdbinfo, axis=1)
-# infoframe = pd.DataFrame(data=infoset, columns= info_cols)
-# infoframe.head(5)
 # infoframe[chamber.columns.values].describe()
 #
 # ranges = infoframe["ExB"].describe().values[3:]
