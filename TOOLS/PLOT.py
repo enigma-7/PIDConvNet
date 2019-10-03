@@ -3,7 +3,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import random, matplotlib
-matplotlib.rcParams.update({'font.size': 18})
+matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['text.usetex'] = True
 
 def surface_(classes, cnames=['$e^-$', '$\\pi$'], colour = ['g','r']):
@@ -111,6 +111,58 @@ def tileplot_(array, title=None):
     plt.show()
 
 def classification_(predict, targets, filename='str', save = False, thresholds=np.linspace(0,1,1000),
+    cnames = ["$\\pi$","$e$"], colour = ['r', 'g'], styles = ['--','-.'], scale='log', b = np.linspace(0,1,50)):
+    matplotlib.rcParams.update({'font.size': 16})
+    matplotlib.rcParams['text.usetex'] = True
+    e_pred = predict[targets==1]
+    p_pred = predict[targets==0]
+    argsort = e_pred.argsort()
+
+    TP = np.array([(e_pred>threshold).sum() for threshold in thresholds])
+    FN = np.array([(e_pred<threshold).sum() for threshold in thresholds])
+    FP = np.array([(p_pred>threshold).sum() for threshold in thresholds])
+    TN = np.array([(p_pred<threshold).sum() for threshold in thresholds])
+
+    TPR = TP/(FN+TP)            #True Positive Rate / Recall
+    FPR = FP/(TN+FP)            #False Positive Rate
+    PPV = TP/(TP+FP)            #Positive Predictive Value / Precision
+    uTPR = np.sqrt(TPR*(1-TPR)/(TP + FN))
+    uFPR = np.sqrt(FPR*(1-FPR)/(TN + FP))
+
+    for k, val in enumerate(PPV):
+        if np.isnan(val):
+            PPV[k] = PPV[k-1]
+        else:
+            continue
+
+    mask = TPR<0.905
+    pioncon = FPR[mask][0]          #estimate pion contamination
+    eleceff = TPR[mask][0]
+    Upioncon = uFPR[mask][0]
+    Ueleceff = uTPR[mask][0]
+    decbound = thresholds[mask][0]
+
+    fig, axes = plt.subplots(1, 2, figsize=(15,5))
+    axes[1].plot(FPR,TPR, 'gray')
+    axes[1].vlines(pioncon, 0, eleceff, 'k', '--',
+        label = "$\\epsilon_{\\pi}|_{%.2f} = (%.2f \\pm %.2f)\\%%$"%(eleceff, pioncon*100,Upioncon*100))
+    axes[1].hlines(eleceff, 0, pioncon, 'k', '--')
+    axes[1].set_ylabel("$e$-efficiency")
+    axes[1].set_xlabel("$\\pi$-contamination")
+    axes[1].legend()
+    axes[1].grid()
+
+    cp, b, p = axes[0].hist(p_pred, color = colour[0], label=cnames[0], bins = b, histtype='step', linewidth=2.0)
+    ce, b, p = axes[0].hist(e_pred, color = colour[1], label=cnames[1], bins = b, histtype='step', linewidth=2.0)
+    axes[0].set_yscale(scale)
+    axes[0].vlines(decbound, 0, max(cp), 'k', label="Decision Boundary")
+    axes[0].set_xlabel("$\\sigma$")
+    axes[0].set_ylabel("Counts")
+    axes[0].legend()
+    axes[0].grid()
+
+"""
+def classification2_(predict, targets, filename='str', save = False, thresholds=np.linspace(0,1,1000),
     cnames = ["$\\pi$","$e$"], colour = ['r', 'g'], styles = ['--','-.'], scale='log'):
     e_pred = predict[targets==1]
     p_pred = predict[targets==0]
@@ -124,7 +176,7 @@ def classification_(predict, targets, filename='str', save = False, thresholds=n
     TPR = TP/(FN+TP)            #True Positive Rate / Recall
     FPR = FP/(TN+FP)            #False Positive Rate
     PPV = TP/(TP+FP)            #Positive Predictive Value / Precision
-    pioncon = FPR[TPR>0.9][-1]          #estimate pion contamination
+    pioncon = (FPR[TPR>0.895][-1] + FPR[TPR<0.905][0])/2          #estimate pion contamination
     decbound = thresholds[TPR<0.905][0]
     AUC = np.sum(np.abs(np.diff(FPR)*TPR[1:]))          #estimate area under curve
 
@@ -155,3 +207,4 @@ def classification_(predict, targets, filename='str', save = False, thresholds=n
     if save:
         plt.savefig(filename)
     plt.show()
+"""
