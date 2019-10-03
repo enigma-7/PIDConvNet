@@ -1,5 +1,5 @@
-import numpy as np
-import tensorflow as tf
+[(mport numpy as np
+)mport tensorflow as tf
 import tensorflow.keras.backend as K
 import matplotlib.pyplot as plt
 import random
@@ -45,10 +45,10 @@ for j, split in enumerate(splits):
         #hists[i].axvline(x=cutoff, label='Threshold', color='k')
 
         thresholds=np.linspace(0,1,10)
-        TP = np.array([positive[positive>threshold].sum() for threshold in thresholds])
-        FN = np.array([positive[positive<threshold].sum() for threshold in thresholds])
-        FP = np.array([negative[negative>threshold].sum() for threshold in thresholds])
-        TN = np.array([negative[negative<threshold].sum() for threshold in thresholds])
+        TP = np.array([(positive>threshold).sum() for threshold in thresholds])
+        FN = np.array([(positive<threshold).sum() for threshold in thresholds])
+        FP = np.array([(negative>threshold).sum() for threshold in thresholds])
+        TN = np.array([(negative<threshold).sum() for threshold in thresholds])
 
         TPR = TP/(TP+FN)
         FPR = FP/(FP+TN)
