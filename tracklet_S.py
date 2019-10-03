@@ -1,50 +1,52 @@
 import numpy as np
-from TOOLS import DATA, MODELS, LOG, METRICS, PLOT, DEFAULTS
-import random, matplotlib, datetime, os
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Dense, Dropout, Flatten, Conv2D, MaxPool2D, concatenate
+from TOOLS import DATA, MODELS, LOG, ML, PLOT, DEFAULTS
+import random, datetime, os, matplotlib
+import matplotlib.pyplot as plt
+import pandas as pd
 import tensorflow as tf
 from sklearn.decomposition import PCA
 from sklearn import preprocessing
-import pandas as pd
-from tensorflow.keras.callbacks import TensorBoard, Callback
-import matplotlib.pyplot as plt
-matplotlib.rcParams.update({'font.size': 18})
+from tensorflow.keras import backend as K
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Dense, Dropout, Flatten, Conv2D, MaxPool2D, concatenate, GaussianNoise
+matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['text.usetex'] = True
 
-run_no = '000265378/'
-dataname = 'all/'
-directory = DEFAULTS.datadir + 'all1/'
-raw_data = np.load(directory + '0_tracks.npy')
-raw_info = np.load(directory + '0_info_set.npy')
-print('Loaded: %s' % directory)
+dataname = 'DS2/'
+ocdbdir = DEFAULTS.ocdbdir
+datadir = DEFAULTS.datadir + dataname
+plotdir = DEFAULTS.plotdir
 
-dataset, infoset = DATA.process_tracklet_(raw_data, raw_info)
-dataset, infoset = DATA.shuffle_(dataset, infoset)
+dataset = np.load(datadir + 'tracklet_dataset.npy')
+infoset = np.load(datadir + 'tracklet_infoset.npy')
 
-columns = ["label", "nsigmae", "nsigmap", "PT", "${dE}/{dx}$", "Momenta [GeV]", "eta", "theta", "phi", "event", "V0trackID",  "track"]
+print("Loaded: %s \n" % datadir )
 
-nx = 3
-ny = 9
-params = infoset[:,nx:ny]
-print(columns[nx:ny])
+columns = DEFAULTS.info_cols_tracklet_ + DEFAULTS.ocdb_cols1
+
+ni = 18
+nf = 21
+params = infoset[:,ni:nf]
+print(columns[ni:nf])
 
 scaler = preprocessing.StandardScaler()
 params = scaler.fit_transform(params)
-infoset[:,nx:ny] = params
-# infoframe = pd.DataFrame(data=infoset, columns=columns)
-# infoframe.head()
+infoset[:,ni:nf] = params
+infoframe = pd.DataFrame(data=infoset, columns=columns)
+infoframe.head()
 
 (X, infoset), (Xv, valid_infoset), (Xt, test_infoset) = DATA.TVT_split_(dataset/1024, infoset)
-
-T  = infoset[:,0]
-I  = infoset[:,nx:ny]
-Tv = valid_infoset[:,0]
-Iv = valid_infoset[:,nx:ny]
-Tt = test_infoset[:,0]
-It = test_infoset[:,nx:ny]
+T  = infoset[:,0].astype(int)
+Tv = valid_infoset[:,0].astype(int)
+Tt = test_infoset[:,0].astype(int)
+I  = infoset[:,ni:nf]
+Iv = valid_infoset[:,ni:nf]
+It = test_infoset[:,ni:nf]
 
 (cs_1, cs_2, d1_1, d1_2, d2_1, d2_2) = (8, 16, 128, 64, 32, 16)
+stamp = datetime.datetime.now().strftime("%d-%m-%H%M%S") + "_"
+mname = "C-%d-%d-D-%d-%d-D6-%d-%d"%(cs_1,cs_2, d1_1, d1_2, d2_1, d2_2)
+#tensorboard, csvlogger = LOG.logger_(run_no, dataname, stamp, mname)
 
 input_main = Input(shape=X.shape[1:], name="X-in")
 x = Conv2D(cs_1, [2,3], activation='relu', padding ='same')(input_main)
@@ -61,16 +63,41 @@ x = Dense(d2_1)(x)
 x = Dense(d2_2)(x)
 output_main = Dense(1, activation='sigmoid', name="I-out")(x)
 
-stamp = datetime.datetime.now().strftime("%d-%m-%H%M%S") + "_"
-mname = "C-%d-%d-D-%d-%d-D6-%d-%d"%(cs_1,cs_2, d1_1, d1_2, d2_1, d2_2)
-#tensorboard, csvlogger = LOG.logger_(run_no, dataname, stamp, mname)
+def WBCE(y_true, y_pred, weight = 10.0, from_logits=False):
+    y_pred = tf.cast(y_pred, dtype='float32')
+    y_true = tf.cast(y_true, y_pred.dtype)
+    return K.mean(ML.weighted_binary_crossentropy(y_true, y_pred, weight=weight, from_logits=from_logits), axis=-1)
 
-model = Model(inputs=[input_main,input_aux], outputs=[output_aux, output_main])
-model.summary()
+model = Model(inputs=[input_main,input_aux], outputs=[output_main, output_aux])
+# model.summary()
 model.compile(optimizer=tf.train.AdamOptimizer(learning_rate=1e-3),
-    loss='binary_crossentropy',metrics=[METRICS.pion_con])
-model.fit([X,I], [T,T], batch_size=2**8, epochs=10, validation_data=([Xv,Iv],[Tv, Tv]),)
+    loss=WBCE, metrics=[ML.pion_con])
+model.fit([X,I], [T,T], batch_size=2**9, epochs=10, validation_data=([Xv,Iv],[Tv,Tv]),)
     #callbacks=[tensorboard, csvlogger])
+
+model.summary()
+
+"""
+
+input_main = Input(shape=X.shape[1:], name="X-in")
+x = Conv2D(cs_1, [2,3], activation='relu', padding ='same')(input_main)
+x = MaxPool2D([2,2], 2, padding='valid')(x)
+x = Conv2D(cs_2, [2,3], activation='relu', padding='same')(x)
+x = MaxPool2D([2,2], 2, padding='valid')(x)
+x = Flatten()(x)
+input_aux = Input(shape=I.shape[1:], name="gain")
+x = concatenate([input_aux, x])
+x = Dense(d1_1)(x)
+x = Dense(d1_2)(x)
+output_main = Dense(1, activation='sigmoid', name="X-out")(x)
+
+model = Model(inputs=[input_main,input_aux], outputs=output_main)
+# model.summary()
+model.compile(optimizer=tf.train.AdamOptimizer(learning_rate=1e-3),
+    loss='binary_crossentropy',metrics=[ML.pion_con])
+model.fit([X,I], T, batch_size=2**8, epochs=10, validation_data=([Xv,Iv],Tv),)
+    #callbacks=[tensorboard, csvlogger])
+"""
 
 # plotdir = '/home/jibran/Desktop/neuralnet/plots/'
 # directory = "logs-CSV/" + run_no + dataname

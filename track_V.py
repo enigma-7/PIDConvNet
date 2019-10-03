@@ -1,30 +1,24 @@
 import numpy as np
-from TOOLS import DATA, MODELS, LOG, METRICS, PLOT, DEFAULTS
-import random, datetime, os, matplotlib
+from TOOLS import DATA, MODELS, LOG, ML,PLOT, DEFAULTS
+import random, datetime, os
 import matplotlib.pyplot as plt
 import pandas as pd
+import matplotlib
+import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense, Dropout, Flatten, Conv2D, MaxPool2D, concatenate, GaussianNoise
-import tensorflow as tf
-matplotlib.rcParams.update({'font.size': 18})
+matplotlib.rcParams.update({'font.size': 16})
 matplotlib.rcParams['text.usetex'] = True
 
-dataname = 'DS2/'
+dataname = 'DS3/'
 ocdbdir = DEFAULTS.ocdbdir
 datadir = DEFAULTS.datadir + dataname
 plotdir = DEFAULTS.plotdir
 
-dataset = np.load(datadir + '0_tracks.npy')
-infoset = np.load(datadir + '0_info_set.npy')
-print("Loaded: %s \n" % datadir )
-infoset[:,0].sum()/infoset.shape[0]
+dataset = np.load(datadir + 'track_dataset.npy')
+infoset = np.load(datadir + 'track_infoset.npy')
 
-dataset, infoset, coordinates = DATA.process_track_(dataset, infoset)
-# dataset, infoset = DATA.ocdb_tracklet_(dataset, infoset, coordinates, DEFAULTS.ocdbdir)
-infoset[:,0].sum()/infoset.shape[0]
-X, infoset = DATA.shuffle_(dataset/1024, infoset)
-
-(X, infoset), (Xv, valid_infoset), (Xt, test_infoset) = DATA.TVT_split_(X, infoset)
+(X, infoset), (Xv, valid_infoset), (Xt, test_infoset) = DATA.TVT_split_(dataset/1024, infoset)
 T  = infoset[:,0]
 Tv = valid_infoset[:,0]
 Tt = test_infoset[:,0]
@@ -33,6 +27,8 @@ Tt = test_infoset[:,0]
 # It = test_infoset[:,nx:ny]# I  = infoset[:,nx:ny]
 
 (cs_1, cs_2, d1_1, d1_2) = (8, 16, 128, 64)
+
+"""
 dropouts = [0.3]
 stamp = datetime.datetime.now().strftime("%d-%m-%H%M%S") + "_"
 for dropout in dropouts:
@@ -54,8 +50,27 @@ for dropout in dropouts:
     model = Model(inputs=input, outputs=output)
     model.compile(optimizer=tf.train.AdamOptimizer(learning_rate=1e-3), loss='binary_crossentropy', metrics=[METRICS.pion_con])
     model.fit(x=X, y=T, batch_size = 2**8, epochs=20, validation_data=(Xv,Tv))#, callbacks=[tensorboard, csvlogger])
+"""
 
-    """
+mname = "track_%.1f_"%dropout + "C-%d-%d-D-%d-%d"%(cs_1, cs_2, d1_1, d1_2)
+    # tensorboard, csvlogger = LOG.logger_(dataname, stamp, mname)
+
+input = Input(shape=X.shape[1:], name="X-in")
+x = Conv2D(cs_1, [2,3], activation='relu', padding ='same')(input)
+x = MaxPool2D([2,2], 2, padding='valid')(x)
+x = Conv2D(cs_2, [2,3], activation='relu', padding='same')(x)
+x = MaxPool2D([2,2], 2, padding='valid')(x)
+x = Flatten()(x)
+x = GaussianNoise(10/1024)(x)
+x = Dense(d1_1)(x)
+x = Dense(d1_2)(x)
+output = Dense(1, activation='sigmoid', name="X-out")(x)
+
+model = Model(inputs=input, outputs=output)
+model.compile(optimizer=tf.train.AdamOptimizer(learning_rate=1e-3), loss='binary_crossentropy', metrics=[ML.pion_con])
+model.fit(x=X, y=T, batch_size = 2**8, epochs=20, validation_data=(Xv,Tv))#, callbacks=[tensorboard, csvlogger])
+
+"""
     frame, nm = LOG.import_(DEFAULTS.track_uncalib_dropout_iter, position=2)
 frame.head()
 array = frame.values.reshape(-1,150,5)
@@ -75,9 +90,9 @@ axes[0].set_ylabel("Loss")
 # plt.savefig(plotdir + mname + ".png")
 """
 
-# P = model.predict(Xt).reshape(Xt.shape[0])
-# PLOT.classification_(P, Tt, DEFAULTS.plotdir + mname + "_class.png", save = False)
-#
+P = model.predict(Xt).reshape(-1)
+PLOT.classification_(P, Tt)
+
 # e_pred = P[Tt==1]
 # p_pred = P[Tt==0]
 # argsort = e_pred.argsort()
