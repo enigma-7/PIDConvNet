@@ -20,6 +20,25 @@ print('Loaded: %s' % directory)
 dataset, infoset = DATA.process_1(raw_data, raw_info)
 dataset, infoset = DATA.shuffle_(dataset, infoset)
 
+def WBCE(y_true, y_pred, weight = 7.0, from_logits=False):
+    y_pred = tf.cast(y_pred, dtype='float32')
+    y_true = tf.cast(y_true, y_pred.dtype)
+    return K.mean(ML.weighted_binary_crossentropy(y_true, y_pred, weight=weight, from_logits=from_logits), axis=-1)
+
+input = Input(shape=X.shape[1:],)# name="X-in")
+x = Conv2D(cs_1, [2,3], activation='relu', padding ='same')(input)
+x = MaxPool2D([2,2], 2, padding='valid')(x)
+x = Conv2D(cs_2, [2,3], activation='relu', padding='same')(x)
+x = MaxPool2D([2,2], 2, padding='valid')(x)
+x = Flatten()(x)
+x = Dense(d1_1)(x)
+x = Dense(d1_2)(x)
+output = Dense(1, activation='sigmoid',)(x)# name="X-out")(x)
+
+model = Model(inputs=input, outputs=output)
+model.compile(optimizer=tf.train.AdamOptimizer(learning_rate=1e-3), loss=WBCE, metrics=[ML.pion_con])
+model.fit(x=X, y=T, batch_size = 2**9, epochs=20, validation_data=(Xv,Tv), callbacks=[tensorboard, csvlogger])
+
 
 columns = ["label", "nsigmae", "nsigmap", "PT", "${dE}/{dx}$", "Momenta [GeV]", "eta", "theta", "phi", "event", "V0trackID",  "track"]
 nx = 3

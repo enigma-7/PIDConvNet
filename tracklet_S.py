@@ -22,10 +22,10 @@ infoset = np.load(datadir + 'tracklet_infoset.npy')
 
 print("Loaded: %s \n" % datadir )
 
-columns = DEFAULTS.info_cols_tracklet_ + DEFAULTS.ocdb_cols1
+columns = DEFAULTS.info_cols_tracklet_ + DEFAULTS.ocdb_cols1 + DEFAULTS.ocdb_cols2
 
 ni = 18
-nf = 21
+nf = None
 params = infoset[:,ni:nf]
 print(columns[ni:nf])
 
