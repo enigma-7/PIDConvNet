@@ -41,7 +41,7 @@ def F1(y_true, y_pred, e_eff = 90, thresh=1e-4):
     PPV = tf.cast(tf.count_nonzero(e_pred > cutoff) / tf.count_nonzero(y_pred > cutoff), dtype='float32')
     return tf.cast(2*PPV*TPR/(PPV+TPR), dtype='float32')
 
-def WBCE(y_true, y_pred, weight = 1.0, from_logits=False, label_smoothing=0):
+def WBCE(y_true, y_pred, weight = 5.0, from_logits=False, label_smoothing=0):
     y_pred = tf.cast(y_pred, dtype='float32')
     y_true = tf.cast(y_true, y_pred.dtype)
     return K.mean(weighted_binary_crossentropy(y_true, y_pred, weight=weight, from_logits=from_logits), axis=-1)

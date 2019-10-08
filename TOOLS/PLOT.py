@@ -111,7 +111,8 @@ def tileplot_(array, title=None):
     plt.show()
 
 def classification_(predict, targets, filename='str', save = False, thresholds=np.linspace(0,1,1000),
-    cnames = ["$\\pi$","$e$"], colour = ['r', 'g'], styles = ['--','-.'], scale='log', b = np.linspace(0,1,50)):
+    cnames = ["$\\pi$","$e$"], colour = ['r', 'g'], styles = ['--','-.'], scale='log', b = np.linspace(0,1,50),
+    pdf = True):
     matplotlib.rcParams.update({'font.size': 16})
     matplotlib.rcParams['text.usetex'] = True
     e_pred = predict[targets==1]
@@ -152,8 +153,10 @@ def classification_(predict, targets, filename='str', save = False, thresholds=n
     axes[1].legend()
     axes[1].grid()
 
-    cp, b, p = axes[0].hist(p_pred, color = colour[0], label=cnames[0], bins = b, histtype='step', linewidth=2.0)
-    ce, b, p = axes[0].hist(e_pred, color = colour[1], label=cnames[1], bins = b, histtype='step', linewidth=2.0)
+    cp, b, p = axes[0].hist(p_pred, color = colour[0], label=cnames[0],
+        bins = b, histtype='step', linewidth=2.0, density = pdf)
+    ce, b, p = axes[0].hist(e_pred, color = colour[1], label=cnames[1],
+        bins = b, histtype='step', linewidth=2.0, density = pdf)
     axes[0].set_yscale(scale)
     axes[0].vlines(decbound, 0, max(cp), 'k', label="Decision Boundary")
     axes[0].set_xlabel("$\\sigma$")
