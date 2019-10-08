@@ -32,35 +32,40 @@ def process_tracklet_(raw_data, raw_info, min_tracklet=1.0, min_adcvalue=10.0, m
     raw_info[26:32] = cols
     raw_info[32:38] = present_map
     """
-    mask_tracklet = raw_info[:,13] > min_tracklet                          #Discriminate tracks based on no. of tracklets
+    mask_tracklet = raw_info[:,13] >= min_tracklet                          #Discriminate tracks based on no. of tracklets
     mask_momentum = (raw_info[:,5] > min_momentum) & (raw_info[:,5] < max_momentum) #Select momentum range
     mask_total = np.logical_and(mask_tracklet,mask_momentum)
 
     raw_info = raw_info[mask_total]
     raw_data = raw_data[mask_total]
 
+    mask_adcvalue = raw_data.reshape(-1,17,24,1).sum(axis=(1,2,3)) > 10.0
+    present = raw_info[:,-6:].flatten('C')
+    present = np.where(mask_adcvalue, present, 0)
+
+    raw_info[:,13] = present.reshape(-1,6).sum(axis=1)
     numtracklets = raw_info[:,13].astype(int)                                  #Tracklets per track
-    infoset = np.zeros((numtracklets.sum(), raw_info[:,:13].shape[1]))
+    infoset = np.zeros((numtracklets.sum(), raw_info[:,:14].shape[1]))
     k = 0
     for i in range(len(numtracklets)):
         t = i
         for j in range(numtracklets[i]):
-            infoset[k] = raw_info[i,:13]
+            infoset[k] = raw_info[i,:14]
             k += 1
 
-    present = raw_info[:,-6:].flatten('C').astype('bool')
+    present = present.astype(bool)
     dataset = raw_data.reshape(-1,17,24,1)[present]  #NHWC array
     coordinates = raw_info[:,14:32].reshape(-1,3,6).swapaxes(1,2).reshape(-1,3)[present].astype('int') #[tracklet, [det, row, col]]
-    mask_adcvalue = dataset.sum(axis=(1,2,3)) > min_adcvalue              #Sum of ADC per tracklet
+           #Sum of ADC per tracklet
 
-    return dataset[mask_adcvalue], np.append(infoset[mask_adcvalue],coordinates[mask_adcvalue],axis=1)
+    return dataset, np.append(infoset, coordinates, axis=1)
 
 def process_track_(raw_data, raw_info, num_tracklet=6.0, min_adcvalue=10.0, min_momentum=0.0, max_momentum=100.0):
     mask_tracklet = raw_info[:,13] == num_tracklet                         #Discriminate tracks based on no. of tracklets
     mask_adcvalue = raw_data.sum(axis=(1,2,3)) > min_adcvalue              #Sum of ADC per tracklet
     mask_momentum = (raw_info[:,5] > min_momentum) & (raw_info[:,5] < max_momentum) #Select momentum range
 
-    infoset = raw_info[mask_tracklet & mask_adcvalue & mask_momentum][:,:13]
+    infoset = raw_info[mask_tracklet & mask_adcvalue & mask_momentum][:,:14]
     dataset = raw_data[mask_tracklet & mask_adcvalue & mask_momentum].swapaxes(1,2).swapaxes(2,3)
     coordinates = raw_info[mask_tracklet & mask_adcvalue & mask_momentum][:,14:32].reshape(-1,3,
         int(num_tracklet)).swapaxes(1,2).astype('int')
@@ -70,15 +75,17 @@ def ocdb_expand_(infoset, ocdbdir):
     ###     Appends chamber based ocdb info to infoset. Leaves dataset unchanged.
     R = infoset[:,9].astype('int')
     runs = set(R)
-    ocdbinfo = np.zeros((infoset.shape[0], 5))
+    ocdbinfo = np.zeros((infoset.shape[0], 5 + 17))
     print("Now processing OCDB info for runs:\n")
-    coordinates = infoset[:,13:17].astype(int)
+    coordinates = infoset[:,14:17].astype(int)
     for run in runs:
         print("\t -%s"%run)
-        ocdb = pd.read_csv(ocdbdir + 'chamber_info_2016_%d.txt'%run, header = None).values
-        ocdb = np.delete(ocdb, 0, 1)
+        chamber = pd.read_csv(ocdbdir + 'chamber_info_2016_%d.txt'%run, header = None).values
+        chamber = np.delete(chamber, 0, 1)
+        gainlocl = pd.read_csv(ocdbdir + 'local_gains_2016_%d.txt'%run, header = None).values.reshape((540, 16,-1))[:,:,2:]           #(detector, row, column)
         for i, [d, r, c] in enumerate(coordinates):
-            ocdbinfo[i] = ocdb[d]
+            ocdb = np.append(chamber[d], gainlocl[d, r, c-8:c+9], axis=0)
+            ocdbinfo[i] = ocdb
     print("\nInfoset expanded with OCDB \n")
     infoset = np.append(infoset, ocdbinfo,axis=1)
     return infoset
@@ -88,7 +95,7 @@ def ocdb_tracklet_(dataset, infoset, ocdbdir):
     runs = set(R)
     ocdbinfo = np.zeros((dataset.shape[0], 4))
     print("Now processing OCDB info for runs:\n")
-    coordinates = infoset[:,13:17].astype(int)
+    coordinates = infoset[:,14:17].astype(int)
     for run in runs:
         print("\t -%s"%run)
         ocdb = pd.read_csv(ocdbdir + 'chamber_info_2016_%d.txt'%run, header = None).values
@@ -103,7 +110,7 @@ def ocdb_tracklet_(dataset, infoset, ocdbdir):
         for i, [d, r, c] in enumerate(coordinates):
             if i == mask[i]:
                 # gainP[i,:,:,0] = np.tile(gainlocl[d, r, c-8:c+9],(24,1)).T
-                gainC[i,:,:,0] = np.tile(gainglob[d],(17,24))
+                gainC[i,:,:,0] = np.tile(1/gainglob[d],(17,24))
                 ocdbinfo[i] = ocdb[d]
 
         dataset = np.multiply(dataset, gainC)
@@ -114,6 +121,7 @@ def ocdb_tracklet_(dataset, infoset, ocdbdir):
 def ocdb_track_(dataset, infoset, coordinates, ocdbdir):
     R = infoset[:,9].astype('int')
     runs = set(R)
+    print("Now processing OCDB info for runs:\n")
     ocdbinfo = np.zeros((dataset.shape[0],4,dataset.shape[-1]))
     for run in runs:
         print(run)
@@ -122,17 +130,18 @@ def ocdb_track_(dataset, infoset, coordinates, ocdbdir):
         ocdb = np.delete(ocdb,[0,3],1)
         gainlocl = pd.read_csv(ocdbdir + 'local_gains_2016_%d.txt'%run, header = None).values.reshape((540, 16,-1))[:,:,2:]           #(detector, row, column)
 
-        gainG = np.ones(dataset.shape)                   #gain for chambers
+        gainC = np.ones(dataset.shape)                   #gain for chambers
         gainP = np.ones(dataset.shape)                   #gain for pads
         mask = np.where(R==run, range(dataset.shape[0]), -1)
 
         for i in range(coordinates.shape[0]):
             if i == mask[i]:
                 for j, [d, r, c] in enumerate(coordinates[i]):
-                    gainP[i,:,:,j] = np.tile(gainlocl[d, r, c-8:c+9],(24,1)).T
-                    gainG[i,:,:,j] = np.tile(gainglob[d],(17,24))
+                    # gainP[i,:,:,j] = np.tile(1/gainlocl[d, r, c-8:c+9],(24,1)).T
+                    gainC[i,:,:,j] = np.tile(1/gainglob[d],(17,24))
                     ocdbinfo[i, : , j] = ocdb[d]
-        dataset = np.multiply(np.multiply(dataset, gainP),gainG)
+        dataset = np.multiply(np.multiply(dataset, gainP), gainC)
+    print("\nTrack structure with OCDB initialized \n")
     return dataset, infoset, ocdbinfo
 
 def bin_time_(dataset, bins = 8):
@@ -187,6 +196,15 @@ def TVT_split_(dataset, infoset, test_split=0.1, valid_split=0.2):
     test_dataset  = dataset[N2:]
     test_infoset  = infoset[N2:]
     return [train_dataset, train_infoset], [valid_dataset, valid_infoset], [test_dataset, test_infoset]
+
+def TV_split_(dataset, infoset, valid_split=0.2):
+    #   Create training and validation sets   #
+    N1 = int((valid_split)*infoset.shape[0])
+    valid_dataset = dataset[:N1]
+    valid_infoset = infoset[:N1]
+    train_dataset = dataset[N1:]
+    train_infoset = infoset[N1:]
+    return [train_dataset, train_infoset], [valid_dataset, valid_infoset]
 
 def likelihood_(predict, infoset, b = np.linspace(0,1,50)):
     targets = infoset[:,0]
