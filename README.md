@@ -1,1 +1,3 @@
-# PIDConvNet
+# Repository for Honours Project "ConvNet Architectures on ALICE tracks for PID of Electrons and Pions"
+
+_Two general convolutional neural network (ConvNet) models have been developed for particle identification using transition radiation detector data from run 2 of the ALICE experiment, namely: the track and tracklet models which, overall, provide overall performance of_ $E_{π}^{90}$ = (11.0±0.6)% _and_ $E_{π}^{90}$ = (52.1±0.4)%_, respectively. Outputs of the tracklet model may be recombined through likelihood implementations and Artificial Neural Networks (ANNs) - and when evaluated on the subset of data on which the track model is trained and tested reveal performance of up to_ $E_{π}^{90}$ = (5.5 ± 0.3)%. _Moreover, quantitative results on the chamber gas gain calibration were gathered by an appropriate recombination ANN, indicating that improvements on classifications, though rather marginal, were possible._
